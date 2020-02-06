@@ -18,11 +18,11 @@ class TrainDataset(torch.utils.data.Dataset):
             index=index.tolist()
 
         image_path=self.data_frame.loc[index,'path']
-        image=Image.open(image_path).convert('YCbCr')
+        image_Y=Image.open(image_path).convert('YCbCr').split()[0]
         if self.transform!=None:
-            image=self.transform(image)
+            image_Y=self.transform(image_Y)
 
-        return image
+        return image_Y
 
 class TestDataset(torch.utils.data.Dataset):
     def __init__(self,csv_file,transform=None):
@@ -39,12 +39,16 @@ class TestDataset(torch.utils.data.Dataset):
             index=index.tolist()
         
         images_path=[self.data_frame.loc[index,col] for col in self.columns]
-        images={col:Image.open(path).convert('YCbCr') for col,path in zip(self.columns,images_path)}
+        images_Y={col:Image.open(path).convert('YCbCr').split()[0] for col,path in zip(self.columns,images_path)}
+        images_Cb={col:Image.open(path).convert('YCbCr').split()[1] for col,path in zip(self.columns,images_path)}
+        images_Cr={col:Image.open(path).convert('YCbCr').split()[2] for col,path in zip(self.columns,images_path)}
         
         if self.transform!=None:
-            images={key:self.transform(images[key]) for key in images.keys()}
+            images_Y={key:self.transform(images_Y[key]) for key in images_Y.keys()}
+            images_Cb={key:self.transform(images_Cb[key]) for key in images_Cb.keys()}
+            images_Cr={key:self.transform(images_Cr[key]) for key in images_Cr.keys()}
 
-        return images
+        return images_Y,images_Cb,images_Cr
 
 class RandomSelectedRotation(object):
     def __init__(self,select_list):
@@ -62,7 +66,7 @@ transform=transforms.Compose([transforms.RandomCrop(60),
                               transforms.RandomVerticalFlip(),
                               transforms.ToTensor()])
 transform_T91=transforms.Compose([transforms.RandomCrop(60),
-                                  RandomSelectedRotation([0,90,180,270]),
+#                                  RandomSelectedRotation([0,90,180,270]),
                                   transforms.RandomHorizontalFlip(),
                                   transforms.RandomVerticalFlip(),
                                   transforms.ToTensor()])
@@ -71,18 +75,24 @@ transform_DIV2K=transforms.Compose([transforms.RandomCrop(600),
                                     transforms.RandomHorizontalFlip(),
                                     transforms.RandomVerticalFlip(),
                                     transforms.ToTensor()])
+transform_Test=transforms.Compose([transforms.ToTensor()])
 
 TrainData_T91=TrainDataset('./Datasets/TrainData_T91.csv',transform=transform_T91)
 TrainData_BSD500=TrainDataset('./Datasets/TrainData_BSD500.csv',transform=transform_DIV2K)
 TrainData_DIV2K=TrainDataset('./Datasets/TrainData_DIV2K.csv',transform=transform)
-TestData_Urban100_2=TestDataset('./Datasets/TestData_Urban100_2.csv',transform=transform)
-TestData_Urban100_4=TestDataset('./Datasets/TestData_Urban100_4.csv',transform=transform)
-TestData_BSD100_2=TestDataset('./Datasets/TestData_BSD100_2.csv',transform=transform)
-TestData_BSD100_3=TestDataset('./Datasets/TestData_BSD100_3.csv',transform=transform)
-TestData_BSD100_4=TestDataset('./Datasets/TestData_BSD100_4.csv',transform=transform)
-TestData_Set5_2=TestDataset('./Datasets/TestData_Set5_2.csv',transform=transform)
-TestData_Set5_3=TestDataset('./Datasets/TestData_Set5_3.csv',transform=transform)
-TestData_Set5_4=TestDataset('./Datasets/TestData_Set5_4.csv',transform=transform)
-TestData_Set14_2=TestDataset('./Datasets/TestData_Set14_2.csv',transform=transform)
-TestData_Set14_3=TestDataset('./Datasets/TestData_Set14_3.csv',transform=transform)
-TestData_Set14_4=TestDataset('./Datasets/TestData_Set14_4.csv',transform=transform)
+TestData_Urban100={2:TestDataset('./Datasets/TestData_Urban100_2.csv',transform=transform),
+                   4:TestDataset('./Datasets/TestData_Urban100_4.csv',transform=transform)}
+TestData_BSD100={2:TestDataset('./Datasets/TestData_BSD100_2.csv',transform=transform),
+                 3:TestDataset('./Datasets/TestData_BSD100_3.csv',transform=transform),
+                 4:TestDataset('./Datasets/TestData_BSD100_4.csv',transform=transform)}
+TestData_Set5={2:TestDataset('./Datasets/TestData_Set5_2.csv',transform=transform_Test),
+               3:TestDataset('./Datasets/TestData_Set5_3.csv',transform=transform_Test),
+               4:TestDataset('./Datasets/TestData_Set5_4.csv',transform=transform_Test)}
+TestData_Set14={2:TestDataset('./Datasets/TestData_Set14_2.csv',transform=transform),
+                3:TestDataset('./Datasets/TestData_Set14_3.csv',transform=transform),
+                4:TestDataset('./Datasets/TestData_Set14_4.csv',transform=transform)}
+
+if __name__=='__main__':
+    loader=torch.utils.data.DataLoader(dataset=TrainData_T91,batch_size=8)
+    for images in loader:
+        print(images)

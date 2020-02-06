@@ -13,8 +13,8 @@ class LossMeter(object):
         self.count=0
 
     def update(self,val,count):
-        self.sum+=val*n
-        self.count+=n
+        self.sum+=val*count
+        self.count+=count
         self.avg=self.sum/self.count
 
 def calc_PSNR(mse):
