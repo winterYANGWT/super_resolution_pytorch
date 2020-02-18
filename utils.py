@@ -1,6 +1,31 @@
+import torch.nn as nn
 import numpy as np
 import math
 from PIL import Image
+
+class Residual_Block(nn.Module):
+    def __init__(self,in_channels,out_channels):
+        super(Residual_Block,self).__init__()
+        self.conv=nn.Sequential(nn.Conv2d(in_channels,out_channels,
+                                          kernel_size=3,
+                                          stride=1,
+                                          padding=1),
+                                nn.PReLU(),
+                                nn.Conv2d(out_channels,out_channels,
+                                          kernel_size=3,
+                                          stride=1,
+                                          padding=1))
+        self.activation=nn.PReLU()
+
+    def forward(self,x):
+        x_copy=x
+        x=self.conv(x)
+        x=self.activation(x+x_copy)
+        return x
+
+
+class Dense_Block(nn.Module):
+    pass
 
 def calc_PSNR(mse):
     return 10*math.log10(1/mse)
