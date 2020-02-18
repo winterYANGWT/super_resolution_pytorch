@@ -1,76 +1,150 @@
 import torch
-import torchvision
 import torch.nn as nn
-import torchvision.transforms as transforms
+import torch.nn.functional as F
 import torch.optim as optim
+import torch.backends.cudnn as cudnn
 import os
 import model
 import datasets
 import meter
-from tqdm import tqdm
+import utils
 
-BATCH_SIZE=1
-UPSCALE_FACTOR=3
-EPOCH=800*30
-EVAL_INTER=1*30
+BATCH_SIZE=8
+UPSCALE_FACTOR_LIST=[3]
+EPOCH=800
+EVAL_INTER=1
 LEARNING_RATE=0.1**3
-SAVE_PATH='./model/model1/'+str(UPSCALE_FACTOR)
+SAVE_PATH='./model/FSRCNN'
+LEARNING_DECAY_LIST=[0.8,0.9,1]
+
+def train(model_dict,upscale_factor,data_loader,criterion,optimizer,meter,interpolate):
+    #extract model
+    generative_net=model_dict['generative_net']
+    upscale_net=model_dict['upscale_net'][upscale_factor]
+    extra_net=model_dict['extra_net']
+
+    #train
+    generative_net.train()
+    upscale_net.train()
+    extra_net.train()
+    for inputs,labels in data_loader:
+        if interpolate==True:
+            inputs=F.interpolate(inputs,
+                                 scale_factor=UPSCALE_FACTOR).to(device)    
+        else:
+            inputs=inputs.to(device)
+        labels=labels.to(device)
+        outputs=generative_net(inputs)
+        outputs=upscale_net(outputs)
+        outputs=extra_net(outputs)
+        loss=criterion(outputs,labels)
+        meter.update(loss.item(),len(inputs))
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+    
+def eval(model_dict,upscale_factor,data_loader,criterion,optimizer,meter,interpolate):
+    #extract model
+    generative_net=model_dict['generative_net']
+    upscale_net=model_dict['upscale_net'][upscale_factor]
+    extra_net=model_dict['extra_net']
+
+    #eval
+    generative_net.eval()
+    upscale_net.eval()
+    extra_net.eval()
+    with torch.no_grad():
+#       for inputs,labels in data_loader:
+#            inputs=inputs.to(device)
+#            labels=labels.to(device)
+        for images in data_loader:
+            if interpolate==True:
+                inputs=F.interpolate(images['LR'],scale_factor=UPSCALE_FACTOR).to(device)
+            else:
+                inputs=images['LR'].to(device)
+            labels=images['HR'].to(device)
+            outputs=generative_net(inputs)
+            outputs=upscale_net(outputs)
+            outputs=extra_net(outputs)
+            loss=criterion(outputs,labels)
+            meter.update(utils.calc_PSNR(loss.item()),len(inputs))
+
+def save_model(model_dict,scale,output_dir,epoch):
+    #check if output dir exists
+    save_path=os.path.join(output_dir,str(scale),str(epoch+1))
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+
+    #save
+    generative_net=model_dict['generative_net']
+    upscale_net=model_dict['upscale_net'][scale]
+    extra_net=model_dict['extra_net']
+    torch.save(generative_net.state_dict(),os.path.join(save_path,'generative_net'))
+    torch.save(upscale_net.state_dict(),os.path.join(save_path,'upscale_net'))
+    torch.save(extra_net.state_dict(),os.path.join(save_path,'extra_net'))
+
 
 if __name__=='__main__':
+    #set device 
+    cudnn.benchmark=True
+    device=torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
     #load data
-    train_data=datasets.TrainData_T91
-    eval_data=datasets.TestData_Set5[UPSCALE_FACTOR]
-    train_data_loader=torch.utils.data.DataLoader(dataset=train_data,
-                                                  batch_size=BATCH_SIZE,
-                                                  shuffle=True,
-                                                  num_workers=4)
-    eval_data_loader=torch.utils.data.DataLoader(dataset=eval_data,
-                                                 batch_size=1,
-                                                 shuffle=False)
+    train_data=datasets.TrainData('91-image_x3.h5')
+    eval_data=datasets.TestData_Set5
+
     #add model
-    model=model.model1(UPSCALE_FACTOR)
-    print(model)
+    models={}
+    models['generative_net']=model.FSRCNN().to(device)
+    models['upscale_net']={}
+    for scale in UPSCALE_FACTOR_LIST:
+        models['upscale_net'][scale]=model.Subpixel_Layer(models['generative_net'].output_channel,scale).to(device)
+    models['extra_net']=model.Extra_Layer().to(device)
+    for key in models.keys():
+        print(models[key])
+
     #set optimizer and criterion
     criterion=nn.MSELoss()
-    optimizer=optim.Adam([{'params':model.conv1.parameters()},
-                          {'params':model.conv2.parameters()},
-                          {'params':model.conv3.parameters(),'lr':LEARNING_RATE*0.1}],lr=LEARNING_RATE)
-    
-    train_loss=meter.LossMeter()
-    eval_loss=meter.LossMeter()
-    for epoch in range(EPOCH):
-        for param_group in optimizer.param_groups:
-            param_group['lr']=LEARNING_RATE*(0.1**(epoch//int(EPOCH*0.8)))
-    #train
-        model.train()
-        with tqdm(total=(len(train_data)-len(train_data)%BATCH_SIZE),ncols=80) as t:
-            t.set_description('epoch: {}/{}'.format(epoch,EPOCH-1))
-            for HR_image in train_data_loader:
-                optimizer.zero_grad()
-                LR_image=nn.functional.interpolate(HR_image,
-                                                   scale_factor=1/UPSCALE_FACTOR,
-                                                   mode='bicubic',
-                                                   align_corners=True)
-                outputs=model(LR_image)
-                loss=criterion(outputs,HR_image)
-                loss.backward()
-                optimizer.step()
-                train_loss.update(loss.item(),len(LR_image))
-                t.set_postfix(loss='{:.6f}'.format(train_loss.avg))
-                t.update(len(HR_image))
-    #eval
-        model.eval()
-        with torch.no_grad():
-            for images_Y,_,_ in eval_data_loader:
-                LR_image_Y=images_Y['LR']
-                HR_image_Y=images_Y['HR']
-                outputs=model(LR_image_Y)
-                loss=torch.mean((outputs-HR_image_Y)**2)
-                eval_loss.update(loss.item(),len(LR_image_Y))
+    optimizer=optim.Adam(models['generative_net'].parameters(),lr=LEARNING_RATE)
+    for scale in UPSCALE_FACTOR_LIST:
+        optimizer.add_param_group({'params':models['upscale_net'][scale].parameters(),'lr':LEARNING_RATE*0.1})
+    optimizer.add_param_group({'params':models['extra_net'].parameters(),'lr':LEARNING_RATE*0.1})
 
+    #set Meter to calculate the average of loss
+    train_loss=meter.AverageMeter()
+    PSNR=meter.AverageMeter()
+    decay=0
+
+    #running
+    for epoch in range(EPOCH):
+        #update learning rate
+        if((epoch+1)==(EPOCH*LEARNING_DECAY_LIST[decay])):
+            for param_group in optimizer.param_groups:
+                param_group['lr']=param_group['lr']*0.5
+            decay=decay+1
+
+        #select upscale factor
+        scale=UPSCALE_FACTOR_LIST[epoch%len(UPSCALE_FACTOR_LIST)]
+        datasets.scale_factor=scale
+
+        #train
+        train_data_loader=torch.utils.data.DataLoader(dataset=train_data,
+                                                      batch_size=BATCH_SIZE,
+                                                      shuffle=True,
+                                                      num_workers=8,
+                                                      pin_memory=True)
+        train(models,scale,train_data_loader,criterion,optimizer,train_loss,False)
+
+        #eval
+        eval_data_loader=torch.utils.data.DataLoader(dataset=eval_data[scale],
+                                                     batch_size=1,
+                                                     shuffle=False)
+        eval(models,scale,eval_data_loader,criterion,optimizer,PSNR,False)
+
+        #report loss and PSNR and save model
         if((epoch+1)%(EVAL_INTER)==0):
-            print(epoch+1,': train_loss: ',train_loss.avg,', eval_loss: ',eval_loss.avg,', PSNR: ',meter.calc_PSNR(eval_loss.avg))
-            torch.save(model.state_dict(),
-                       os.path.join(SAVE_PATH,str(epoch+1)+'.mdl'))            
+            print('{:0>3d}: train_loss: {:.8f}, PSNR: {:.3f}'.format(epoch+1,train_loss.avg,PSNR.avg))
+            save_model(models,scale,SAVE_PATH,epoch)
             train_loss.reset()
-            eval_loss.reset()
+            PSNR.reset()
+
