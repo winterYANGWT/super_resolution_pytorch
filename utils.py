@@ -1,6 +1,8 @@
 import torch.nn as nn
 import numpy as np
 import math
+import random
+import torchvision.transforms as transforms
 from PIL import Image
 
 class Residual_Block(nn.Module):
@@ -27,8 +29,31 @@ class Residual_Block(nn.Module):
 class Dense_Block(nn.Module):
     pass
 
+
+#train and test
 def calc_PSNR(mse):
     return 10*math.log10(1/mse)
+
+
+#dataset
+class RandomSelectedRotation(object):
+    def __init__(self,select_list):
+        super(RandomSelectedRotation,self).__init__()
+        assert isinstance(select_list,list)
+        self.select_list=select_list
+ 
+    def __call__(self,sample):
+        angle=random.choice(self.select_list)
+        return transforms.functional.rotate(sample,angle)
+
+
+class Normalize(object):
+    def __init__(self):
+        super(Normalize,self).__init__()
+
+    def __call__(self,sample):
+        return sample/255.0
+
 
 def RGB2Y(image):
     image=np.array(image).astype(np.float32)
