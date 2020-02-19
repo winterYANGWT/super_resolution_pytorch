@@ -34,11 +34,13 @@ class EvalData(torch.utils.data.Dataset):
         with h5py.File(self.h5_file, 'r') as f:
             return len(f['lr'])
 
+
 class TrainDataset(torch.utils.data.Dataset):
-    def __init__(self,csv_file,transform=None):
+    def __init__(self,csv_file,pil_transform=None,tensor_transform=None):
         super(TrainDataset,self).__init__()
         self.data_frame=pd.read_csv(csv_file)
-        self.transform=transform
+        self.pil_transform=pil_transform
+        self.tensor_transform=tensor_transform
 
     def __len__(self):
         return len(self.data_frame)
@@ -49,15 +51,18 @@ class TrainDataset(torch.utils.data.Dataset):
 
         image_path=self.data_frame.loc[index,'path']
         with Image.open(image_path).convert('RGB') as image_HR:
+            if self.pil_transform!=None:
+                image_HR=self.pil_transform(image_HR)
             width,height=image_HR.size[0]//scale_factor,image_HR.size[1]//scale_factor
             image_LR=image_HR.resize((width,height),resample=Image.BICUBIC)
             image_HR_Y,image_LR_Y=utils.RGB2Y(image_HR),utils.RGB2Y(image_LR)
 
-        if self.transform!=None:
-            image_HR_Y=self.transform(image_HR_Y)
-            image_LR_Y=self.transform(image_LR_Y)
+        if self.tensor_transform!=None:
+            image_HR_Y=self.tensor_transform(image_HR_Y)
+            image_LR_Y=self.tensor_transform(image_LR_Y)
 
         return image_LR_Y,image_HR_Y
+
 
 class TestDataset(torch.utils.data.Dataset):
     def __init__(self,csv_file,transform=None):
@@ -84,58 +89,29 @@ class TestDataset(torch.utils.data.Dataset):
 
         return images_Y
 
-class RandomSelectedRotation(object):
-    def __init__(self,select_list):
-        super(RandomSelectedRotation,self).__init__()
-        assert isinstance(select_list,list)
-        self.select_list=select_list
- 
-    def __call__(self,sample):
-        angle=random.choice(self.select_list)
-        return transforms.functional.rotate(sample,angle)
-
-class Normalize(object):
-    def __init__(self):
-        super(Normalize,self).__init__()
-
-    def __call__(self,sample):
-        return sample/255.0
-
-transform=transforms.Compose([transforms.RandomCrop(60),
-                              RandomSelectedRotation([0,90,180,270]),
-                              transforms.RandomHorizontalFlip(),
-                              transforms.RandomVerticalFlip(),
-                              transforms.ToTensor()])
-transform_T91=transforms.Compose([transforms.RandomCrop(24),
-#                                  RandomSelectedRotation([0,90,180,270]),
-                                  transforms.RandomHorizontalFlip(),
-                                  transforms.RandomVerticalFlip(),
-                                  transforms.ToTensor()])
-transform_DIV2K=transforms.Compose([transforms.RandomCrop(24),
-#                                    RandomSelectedRotation([0,90,180,270]),
-                                    transforms.RandomHorizontalFlip(),
-                                    transforms.RandomVerticalFlip(),
-                                    transforms.ToTensor()])
-transform_Test=transforms.Compose([Normalize(),
-                                   transforms.ToTensor()])
+transform_PIL=transforms.Compose([transforms.RandomCrop(60),
+                                 utils.RandomSelectedRotation([0,90,180,270]),
+                                 transforms.RandomHorizontalFlip(),
+                                 transforms.RandomVerticalFlip()])
+transform_Tensor=transforms.Compose([utils.Normalize(),
+                                     transforms.ToTensor()])
 
 #train data
-TrainData_T91cut=TrainDataset('./Datasets/TrainData_T91cut.csv',transform=transform_Test)
-TrainData_T91=TrainDataset('./Datasets/TrainData_T91.csv',transform=transform_T91)
-TrainData_BSD500=TrainDataset('./Datasets/TrainData_BSD500.csv',transform=transform_DIV2K)
-TrainData_DIV2K=TrainDataset('./Datasets/TrainData_DIV2K.csv',transform=transform)
+TrainData_T91=TrainDataset('./Datasets/TrainData_T91.csv',pil_transform=transform_PIL,tensor_transform=transform_Tensor)
+TrainData_BSD500=TrainDataset('./Datasets/TrainData_BSD500.csv',pil_transform=transform_PIL,tensor_transform=transform_Tensor)
+TrainData_DIV2K=TrainDataset('./Datasets/TrainData_DIV2K.csv',pil_transform=transform_PIL,tensor_transform=transform_Tensor)
 #eval data
-TestData_Urban100={2:TestDataset('./Datasets/TestData_Urban100_2.csv',transform=transform),
-                   4:TestDataset('./Datasets/TestData_Urban100_4.csv',transform=transform)}
-TestData_BSD100={2:TestDataset('./Datasets/TestData_BSD100_2.csv',transform=transform),
-                 3:TestDataset('./Datasets/TestData_BSD100_3.csv',transform=transform),
-                 4:TestDataset('./Datasets/TestData_BSD100_4.csv',transform=transform)}
-TestData_Set5={2:TestDataset('./Datasets/TestData_Set5_2.csv',transform=transform_Test),
-               3:TestDataset('./Datasets/TestData_Set5_3.csv',transform=transform_Test),
-               4:TestDataset('./Datasets/TestData_Set5_4.csv',transform=transform_Test)}
-TestData_Set14={2:TestDataset('./Datasets/TestData_Set14_2.csv',transform=transform),
-                3:TestDataset('./Datasets/TestData_Set14_3.csv',transform=transform),
-                4:TestDataset('./Datasets/TestData_Set14_4.csv',transform=transform)}
+TestData_Urban100={2:TestDataset('./Datasets/TestData_Urban100_2.csv',transform=transform_Tensor),
+                   4:TestDataset('./Datasets/TestData_Urban100_4.csv',transform=transform_Tensor)}
+TestData_BSD100={2:TestDataset('./Datasets/TestData_BSD100_2.csv',transform=transform_Tensor),
+                 3:TestDataset('./Datasets/TestData_BSD100_3.csv',transform=transform_Tensor),
+                 4:TestDataset('./Datasets/TestData_BSD100_4.csv',transform=transform_Tensor)}
+TestData_Set5={2:TestDataset('./Datasets/TestData_Set5_2.csv',transform=transform_Tensor),
+               3:TestDataset('./Datasets/TestData_Set5_3.csv',transform=transform_Tensor),
+               4:TestDataset('./Datasets/TestData_Set5_4.csv',transform=transform_Tensor)}
+TestData_Set14={2:TestDataset('./Datasets/TestData_Set14_2.csv',transform=transform_Tensor),
+                3:TestDataset('./Datasets/TestData_Set14_3.csv',transform=transform_Tensor),
+                4:TestDataset('./Datasets/TestData_Set14_4.csv',transform=transform_Tensor)}
 #test data
 TestData_x2={'Urban100':TestData_Urban100[2],
              'BSD100':TestData_BSD100[2],

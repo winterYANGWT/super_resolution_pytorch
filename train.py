@@ -12,7 +12,7 @@ import utils
 BATCH_SIZE=8
 UPSCALE_FACTOR_LIST=[3]
 EPOCH=800
-EVAL_INTER=1
+ITER_PER_EPOCH=400
 LEARNING_RATE=0.1**3
 SAVE_PATH='./model/FSRCNN'
 LEARNING_DECAY_LIST=[0.8,0.9,1]
@@ -90,7 +90,7 @@ if __name__=='__main__':
     device=torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     #load data
-    train_data=datasets.TrainData('91-image_x3.h5')
+    train_data=datasets.TrainData_T91
     eval_data=datasets.TestData_Set5
 
     #add model
@@ -122,29 +122,24 @@ if __name__=='__main__':
             for param_group in optimizer.param_groups:
                 param_group['lr']=param_group['lr']*0.5
             decay=decay+1
-
         #select upscale factor
         scale=UPSCALE_FACTOR_LIST[epoch%len(UPSCALE_FACTOR_LIST)]
         datasets.scale_factor=scale
-
-        #train
+        #load data
         train_data_loader=torch.utils.data.DataLoader(dataset=train_data,
                                                       batch_size=BATCH_SIZE,
                                                       shuffle=True,
                                                       num_workers=8,
                                                       pin_memory=True)
-        train(models,scale,train_data_loader,criterion,optimizer,train_loss,False)
-
-        #eval
         eval_data_loader=torch.utils.data.DataLoader(dataset=eval_data[scale],
                                                      batch_size=1,
                                                      shuffle=False)
-        eval(models,scale,eval_data_loader,criterion,optimizer,PSNR,False)
-
+        for iteration in range(ITER_PER_EPOCH):
+            train(models,scale,train_data_loader,criterion,optimizer,train_loss,False)
+            eval(models,scale,eval_data_loader,criterion,optimizer,PSNR,False)
         #report loss and PSNR and save model
-        if((epoch+1)%(EVAL_INTER)==0):
-            print('{:0>3d}: train_loss: {:.8f}, PSNR: {:.3f}'.format(epoch+1,train_loss.avg,PSNR.avg))
-            save_model(models,scale,SAVE_PATH,epoch)
-            train_loss.reset()
-            PSNR.reset()
+        print('{:0>3d}: train_loss: {:.8f}, PSNR: {:.3f}'.format(epoch+1,train_loss.avg,PSNR.avg))
+        save_model(models,scale,SAVE_PATH,epoch)
+        train_loss.reset()
+        PSNR.reset()
 
