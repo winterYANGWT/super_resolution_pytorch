@@ -48,7 +48,7 @@ def create_window(window_size,channel=1):
 
 window=create_window(11,1)
 
-def calc_SSIM(img1,img2):
+def calc_SSIM(img1,img2,size_average=True):
     L=1
     pad=0
     _,channel,height,width=img1.size()
