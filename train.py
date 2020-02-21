@@ -10,11 +10,11 @@ import meter
 import utils
 
 BATCH_SIZE=8
-UPSCALE_FACTOR_LIST=[3]
-EPOCH=800
+UPSCALE_FACTOR_LIST=[2,3,4]
+EPOCH=600
 ITER_PER_EPOCH=400
 LEARNING_RATE=0.1**3
-SAVE_PATH='./model/FSRCNN'
+SAVE_PATH='./Model/FSRCNN_234'
 LEARNING_DECAY_LIST=[0.8,0.9,1]
 
 def train(model_dict,upscale_factor,data_loader,criterion,optimizer,meter,interpolate):
@@ -30,7 +30,7 @@ def train(model_dict,upscale_factor,data_loader,criterion,optimizer,meter,interp
     for inputs,labels in data_loader:
         if interpolate==True:
             inputs=F.interpolate(inputs,
-                                 scale_factor=UPSCALE_FACTOR).to(device)    
+                                 scale_factor=upscale_factor).to(device)    
         else:
             inputs=inputs.to(device)
         labels=labels.to(device)
@@ -43,23 +43,21 @@ def train(model_dict,upscale_factor,data_loader,criterion,optimizer,meter,interp
         loss.backward()
         optimizer.step()
     
-def eval(model_dict,upscale_factor,data_loader,criterion,optimizer,meter,interpolate):
+def test(model_dict,upscale_factor,data_loader,criterion,optimizer,PSNR_meter,SSIM_meter,interpolate):
     #extract model
     generative_net=model_dict['generative_net']
     upscale_net=model_dict['upscale_net'][upscale_factor]
     extra_net=model_dict['extra_net']
 
-    #eval
+    #test
     generative_net.eval()
     upscale_net.eval()
     extra_net.eval()
     with torch.no_grad():
-#       for inputs,labels in data_loader:
-#            inputs=inputs.to(device)
-#            labels=labels.to(device)
         for images in data_loader:
             if interpolate==True:
-                inputs=F.interpolate(images['LR'],scale_factor=UPSCALE_FACTOR).to(device)
+                inputs=F.interpolate(images['LR'],
+                                     scale_factor=upscale_factor).to(device)
             else:
                 inputs=images['LR'].to(device)
             labels=images['HR'].to(device)
@@ -67,7 +65,8 @@ def eval(model_dict,upscale_factor,data_loader,criterion,optimizer,meter,interpo
             outputs=upscale_net(outputs)
             outputs=extra_net(outputs)
             loss=criterion(outputs,labels)
-            meter.update(utils.calc_PSNR(loss.item()),len(inputs))
+            SSIM_meter.update(utils.calc_SSIM(outputs,labels),len(inputs))
+            PSNR_meter.update(utils.calc_PSNR(loss.item()),len(inputs))
 
 def save_model(model_dict,scale,output_dir,epoch):
     #check if output dir exists
@@ -113,6 +112,7 @@ if __name__=='__main__':
     #set Meter to calculate the average of loss
     train_loss=meter.AverageMeter()
     PSNR=meter.AverageMeter()
+    SSIM=meter.AverageMeter()
     decay=0
 
     #running
@@ -129,17 +129,17 @@ if __name__=='__main__':
         train_data_loader=torch.utils.data.DataLoader(dataset=train_data,
                                                       batch_size=BATCH_SIZE,
                                                       shuffle=True,
-                                                      num_workers=8,
-                                                      pin_memory=True)
+                                                      num_workers=8)
         eval_data_loader=torch.utils.data.DataLoader(dataset=eval_data[scale],
                                                      batch_size=1,
                                                      shuffle=False)
         for iteration in range(ITER_PER_EPOCH):
             train(models,scale,train_data_loader,criterion,optimizer,train_loss,False)
-            eval(models,scale,eval_data_loader,criterion,optimizer,PSNR,False)
+        test(models,scale,eval_data_loader,criterion,optimizer,PSNR,SSIM,False)
         #report loss and PSNR and save model
-        print('{:0>3d}: train_loss: {:.8f}, PSNR: {:.3f}'.format(epoch+1,train_loss.avg,PSNR.avg))
+        print('{:0>3d}: train_loss: {:.8f}, PSNR: {:.3f} SSIM: {:.3f}, scale: {}'.format(epoch+1,train_loss.avg,PSNR.avg,SSIM.avg,scale))
         save_model(models,scale,SAVE_PATH,epoch)
         train_loss.reset()
         PSNR.reset()
+        SSIM.reset()
 
