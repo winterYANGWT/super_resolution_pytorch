@@ -75,8 +75,13 @@ def calc_SSIM(img1,img2,size_average=True):
         ret=ssim_map.mean(1).mean(1).mean(1)
     return ret
 
-def load_model(models,scale,output_dir):
-    load_path=os.path.join(output_dir,str(scale),'best')
+def load_model(models,scale,output_dir,epoch):
+    if(epoch==-1):
+        load_path=os.path.join(output_dir,str(scale),'best')
+    else:
+        load_path=os.path.join(output_dir,str(scale),str(epoch+1))
+
+    #load
     models['generative'].load_state_dict(torch.load(os.path.join(load_path,'generative')))
     (models['upscale'])[scale].load_state_dict(torch.load(os.path.join(load_path,'upscale')))
     models['extra'].load_state_dict(torch.load(os.path.join(load_path,'extra')))
@@ -91,12 +96,10 @@ def save_model(models,scale,output_dir,epoch):
         os.makedirs(save_path)
 
     #save
-    generative=models['generative']
-    upscale=models['upscale'][scale]
-    extra=models['extra']
-    torch.save(generative.state_dict(),os.path.join(save_path,'generative'))
-    torch.save(upscale.state_dict(),os.path.join(save_path,'upscale'))
-    torch.save(extra.state_dict(),os.path.join(save_path,'extra'))
+    torch.save(models['generative'].state_dict(),os.path.join(save_path,'generative'))
+    torch.save(models['upscale'][scale].state_dict(),os.path.join(save_path,'upscale'))
+    torch.save(models['extra'].state_dict(),os.path.join(save_path,'extra'))
+
 #dataset
 class RandomSelectedRotation(object):
     def __init__(self,select_list):

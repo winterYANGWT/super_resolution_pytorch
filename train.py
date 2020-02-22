@@ -12,12 +12,12 @@ import utils
 
 BATCH_SIZE=8
 UPSCALE_FACTOR_LIST=[2,3,4]
-EPOCH=210
-ITER_PER_EPOCH=600
+EPOCH=70*len(UPSCALE_FACTOR_LIST)
+ITER_PER_EPOCH=400
 LEARNING_RATE=0.1**3
 SAVE_PATH='./Model/FSRCNN_234'
 LEARNING_DECAY_LIST=[0.8,0.9,1]
-CONTINUE=True
+CONTINUE=False
 
 class Best(object):
     def __init__(self):
@@ -51,7 +51,7 @@ def train(models,upscale_factor,data_loader,criterion,optimizer,meter,interpolat
         loss.backward()
         optimizer.step()
     
-def test(models,upscale_factor,data_loader,criterion,optimizer,PSNR_meter,SSIM_meter,interpolate):
+def test(models,upscale_factor,data_loader,criterion,PSNR_meter,SSIM_meter,interpolate):
     #extract model
     generative=models['generative']
     upscale=models['upscale'][upscale_factor]
@@ -136,13 +136,13 @@ if __name__=='__main__':
                                                      shuffle=False)
         for iteration in range(ITER_PER_EPOCH):
             train(models,scale,train_data_loader,criterion,optimizer,train_loss,False)
-        test(models,scale,eval_data_loader,criterion,optimizer,PSNR,SSIM,False)
+        test(models,scale,eval_data_loader,criterion,PSNR,SSIM,False)
         if best[scale].best_psnr<PSNR.avg:
             best[scale].best_psnr=PSNR.avg
             best[scale].best_model=copy.deepcopy(models)
         #report loss and PSNR and save model
         print('{:0>3d}: train_loss: {:.8f}, PSNR: {:.3f} SSIM: {:.3f}, scale: {}'.format(epoch+1,train_loss.avg,PSNR.avg,SSIM.avg,scale))
-        utils.save_model(models,scale,SAVE_PATH,epoch)
+        utils.save_model(models,scale,SAVE_PATH,epoch//len(UPSCALE_FACTOR_LIST))
         train_loss.reset()
         PSNR.reset()
         SSIM.reset()
