@@ -18,7 +18,7 @@ ITER_PER_EPOCH=400
 LEARNING_RATE=0.1**3
 SAVE_PATH='./Model/FSRCNN_234'
 LEARNING_DECAY_LIST=[0.8,0.9,1]
-CONTINUE=(EPOCH_START==0)
+CONTINUE=(EPOCH_START!=0)
 
 class Best(object):
     def __init__(self):
@@ -98,7 +98,7 @@ if __name__=='__main__':
 
     if CONTINUE==True:
         for scale in UPSCALE_FACTOR_LIST:
-            utils.load_model(models,scale,SAVE_PATH)
+            utils.load_model(models,scale,SAVE_PATH,-1)
 
     best={}
     for scale in UPSCALE_FACTOR_LIST:
