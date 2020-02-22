@@ -10,7 +10,7 @@ from PIL import Image
 
 class Residual_Block(nn.Module):
     def __init__(self,in_channels,out_channels):
-        super(Residual_Block,self).__init__()
+        super().__init__()
         self.conv=nn.Sequential(nn.Conv2d(in_channels,out_channels,
                                           kernel_size=3,
                                           stride=1,
@@ -103,7 +103,7 @@ def save_model(models,scale,output_dir,epoch):
 #dataset
 class RandomSelectedRotation(object):
     def __init__(self,select_list):
-        super(RandomSelectedRotation,self).__init__()
+        super().__init__()
         assert isinstance(select_list,list)
         self.select_list=select_list
  
@@ -114,7 +114,7 @@ class RandomSelectedRotation(object):
 
 class Normalize(object):
     def __init__(self):
-        super(Normalize,self).__init__()
+        super().__init__()
 
     def __call__(self,sample):
         return sample/255.0

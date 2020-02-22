@@ -1,6 +1,6 @@
 class AverageMeter(object):
     def __init__(self):
-        super(AverageMeter,self).__init__()
+        super().__init__()
         self.reset()
 
     def reset(self):

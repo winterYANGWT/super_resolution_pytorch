@@ -5,7 +5,7 @@ import utils
 
 class Extra_Layer(nn.Module):
     def __init__(self):
-        super(Extra_Layer,self).__init__()
+        super().__init__()
         self.extra=False
 
     def SRResNet(self):
@@ -23,7 +23,7 @@ class Extra_Layer(nn.Module):
 
 class FSRCNN(nn.Module):
     def __init__(self):
-        super(FSRCNN,self).__init__()
+        super().__init__()
         self.output_channel=56
         self.feature_extract=nn.Sequential(nn.Conv2d(1,56,
                                            kernel_size=5,
@@ -72,7 +72,7 @@ class FSRCNN(nn.Module):
 
 class ESPCN(nn.Module):
     def __init__(self):
-        super(ESPCN,self).__init__()
+        super().__init__()
         self.output_channel=32
         self.nonlinear_mapping=nn.Sequential(nn.Conv2d(1,64,
                                                        kernel_size=5,
@@ -91,7 +91,7 @@ class ESPCN(nn.Module):
 
 class VDSR(nn.Module):
     def __init__(self):
-        super(VDSR,self).__init__()
+        super().__init__()
         self.conv=nn.Sequential(nn.Conv2d(1,64,
                                           kernel_size=3,
                                           stride=1,
@@ -183,7 +183,7 @@ class VDSR(nn.Module):
 
 class SRResNet(nn.Module):
     def __init__(self):
-        super(SRResNet,self).__init__()
+        super().__init__()
         self.output_channel=64
         self.feature_extract=nn.Sequential(nn.Conv2d(1,8,
                                                      kernel_size=3,
@@ -233,20 +233,11 @@ class SRResNet(nn.Module):
         x=self.skip_connection(x)
         x=x+x_copy
         return x
-        
-        
-
-class Model2(nn.Module):
-    def __init__(self):
-        super(Model2,self).__init__()
-
-    def forward(self,x):
-        pass
 
 
 class Subpixel_Layer(nn.Module):
     def __init__(self,input_channel,upscale_factor):
-        super(Subpixel_Layer,self).__init__()
+        super().__init__()
         self.subpixel=nn.Sequential(nn.Conv2d(input_channel,
                                               upscale_factor**2,
                                               kernel_size=1,

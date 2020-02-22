@@ -9,35 +9,9 @@ import utils
 
 scale_factor=0
 
-class TrainData(torch.utils.data.Dataset):
-    def __init__(self,h5_file):
-        super(TrainData,self).__init__()
-        self.h5_file=h5_file
-
-    def __getitem__(self,idx):
-        with h5py.File(self.h5_file,'r') as f:
-            return np.expand_dims(f['lr'][idx]/255.,0),np.expand_dims(f['hr'][idx]/255.,0)
-
-    def __len__(self):
-        with h5py.File(self.h5_file,'r') as f:
-            return len(f['lr'])
-class EvalData(torch.utils.data.Dataset):
-    def __init__(self, h5_file):
-        super(EvalData, self).__init__()
-        self.h5_file = h5_file
-
-    def __getitem__(self, idx):
-        with h5py.File(self.h5_file, 'r') as f:
-            return np.expand_dims(f['lr'][str(idx)][:, :] / 255., 0), np.expand_dims(f['hr'][str(idx)][:, :] / 255., 0)
-
-    def __len__(self):
-        with h5py.File(self.h5_file, 'r') as f:
-            return len(f['lr'])
-
-
 class TrainDataset(torch.utils.data.Dataset):
     def __init__(self,csv_file,pil_transform=None,tensor_transform=None):
-        super(TrainDataset,self).__init__()
+        super().__init__()
         self.data_frame=pd.read_csv(csv_file)
         self.pil_transform=pil_transform
         self.tensor_transform=tensor_transform
@@ -66,7 +40,7 @@ class TrainDataset(torch.utils.data.Dataset):
 
 class TestDataset(torch.utils.data.Dataset):
     def __init__(self,csv_file,transform=None):
-        super(TestDataset,self).__init__()
+        super().__init__()
         self.data_frame=pd.read_csv(csv_file)
         self.transform=transform
         self.keys=self.data_frame.columns[1:]
