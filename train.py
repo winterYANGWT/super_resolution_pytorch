@@ -12,12 +12,13 @@ import utils
 
 BATCH_SIZE=8
 UPSCALE_FACTOR_LIST=[2,3,4]
+EPOCH_START=0
 EPOCH=70*len(UPSCALE_FACTOR_LIST)
 ITER_PER_EPOCH=400
 LEARNING_RATE=0.1**3
 SAVE_PATH='./Model/FSRCNN_234'
 LEARNING_DECAY_LIST=[0.8,0.9,1]
-CONTINUE=False
+CONTINUE=(EPOCH_START==0)
 
 class Best(object):
     def __init__(self):
@@ -117,7 +118,7 @@ if __name__=='__main__':
     decay=0
 
     #running
-    for epoch in range(EPOCH):
+    for epoch in range(EPOCH_START,EPOCH_START+EPOCH):
         #update learning rate
         if((epoch+1)==(EPOCH*LEARNING_DECAY_LIST[decay])):
             for param_group in optimizer.param_groups:
