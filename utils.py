@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 import math
 import random
+import os
 import torchvision.transforms as transforms
 from PIL import Image
 
@@ -74,6 +75,28 @@ def calc_SSIM(img1,img2,size_average=True):
         ret=ssim_map.mean(1).mean(1).mean(1)
     return ret
 
+def load_model(models,scale,output_dir):
+    load_path=os.path.join(output_dir,str(scale),'best')
+    models['generative'].load_state_dict(torch.load(os.path.join(load_path,'generative')))
+    (models['upscale'])[scale].load_state_dict(torch.load(os.path.join(load_path,'upscale')))
+    models['extra'].load_state_dict(torch.load(os.path.join(load_path,'extra')))
+
+def save_model(models,scale,output_dir,epoch):
+    #check if output dir exists
+    if(epoch==-1):
+        save_path=os.path.join(output_dir,str(scale),'best')
+    else:
+        save_path=os.path.join(output_dir,str(scale),str(epoch+1))
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+
+    #save
+    generative=models['generative']
+    upscale=models['upscale'][scale]
+    extra=models['extra']
+    torch.save(generative.state_dict(),os.path.join(save_path,'generative'))
+    torch.save(upscale.state_dict(),os.path.join(save_path,'upscale'))
+    torch.save(extra.state_dict(),os.path.join(save_path,'extra'))
 #dataset
 class RandomSelectedRotation(object):
     def __init__(self,select_list):

@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
 import os
+import copy
 import model
 import datasets
 import meter
@@ -11,22 +12,29 @@ import utils
 
 BATCH_SIZE=8
 UPSCALE_FACTOR_LIST=[2,3,4]
-EPOCH=600
-ITER_PER_EPOCH=4
+EPOCH=210
+ITER_PER_EPOCH=600
 LEARNING_RATE=0.1**3
 SAVE_PATH='./Model/FSRCNN_234'
 LEARNING_DECAY_LIST=[0.8,0.9,1]
+CONTINUE=True
 
-def train(model_dict,upscale_factor,data_loader,criterion,optimizer,meter,interpolate):
+class Best(object):
+    def __init__(self):
+        super().__init__()
+        self.best_psnr=0
+        self.best_model=None
+
+def train(models,upscale_factor,data_loader,criterion,optimizer,meter,interpolate):
     #extract model
-    generative_net=model_dict['generative_net']
-    upscale_net=model_dict['upscale_net'][upscale_factor]
-    extra_net=model_dict['extra_net']
+    generative=models['generative']
+    upscale=models['upscale'][upscale_factor]
+    extra=models['extra']
 
     #train
-    generative_net.train()
-    upscale_net.train()
-    extra_net.train()
+    generative.train()
+    upscale.train()
+    extra.train()
     for inputs,labels in data_loader:
         if interpolate==True:
             inputs=F.interpolate(inputs,
@@ -34,25 +42,25 @@ def train(model_dict,upscale_factor,data_loader,criterion,optimizer,meter,interp
         else:
             inputs=inputs.to(device)
         labels=labels.to(device)
-        outputs=generative_net(inputs)
-        outputs=upscale_net(outputs)
-        outputs=extra_net(outputs)
+        outputs=generative(inputs)
+        outputs=upscale(outputs)
+        outputs=extra(outputs)
         loss=criterion(outputs,labels)
         meter.update(loss.item(),len(inputs))
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
     
-def test(model_dict,upscale_factor,data_loader,criterion,optimizer,PSNR_meter,SSIM_meter,interpolate):
+def test(models,upscale_factor,data_loader,criterion,optimizer,PSNR_meter,SSIM_meter,interpolate):
     #extract model
-    generative_net=model_dict['generative_net']
-    upscale_net=model_dict['upscale_net'][upscale_factor]
-    extra_net=model_dict['extra_net']
+    generative=models['generative']
+    upscale=models['upscale'][upscale_factor]
+    extra=models['extra']
 
     #test
-    generative_net.eval()
-    upscale_net.eval()
-    extra_net.eval()
+    generative.eval()
+    upscale.eval()
+    extra.eval()
     with torch.no_grad():
         for images in data_loader:
             if interpolate==True:
@@ -61,27 +69,12 @@ def test(model_dict,upscale_factor,data_loader,criterion,optimizer,PSNR_meter,SS
             else:
                 inputs=images['LR'].to(device)
             labels=images['HR'].to(device)
-            outputs=generative_net(inputs)
-            outputs=upscale_net(outputs)
-            outputs=extra_net(outputs)
+            outputs=generative(inputs)
+            outputs=upscale(outputs)
+            outputs=extra(outputs)
             loss=criterion(outputs,labels)
             SSIM_meter.update(utils.calc_SSIM(outputs,labels),len(inputs))
             PSNR_meter.update(utils.calc_PSNR(loss.item()),len(inputs))
-
-def save_model(model_dict,scale,output_dir,epoch):
-    #check if output dir exists
-    save_path=os.path.join(output_dir,str(scale),str(epoch+1))
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
-
-    #save
-    generative_net=model_dict['generative_net']
-    upscale_net=model_dict['upscale_net'][scale]
-    extra_net=model_dict['extra_net']
-    torch.save(generative_net.state_dict(),os.path.join(save_path,'generative_net'))
-    torch.save(upscale_net.state_dict(),os.path.join(save_path,'upscale_net'))
-    torch.save(extra_net.state_dict(),os.path.join(save_path,'extra_net'))
-
 
 if __name__=='__main__':
     #set device 
@@ -94,20 +87,28 @@ if __name__=='__main__':
 
     #add model
     models={}
-    models['generative_net']=model.FSRCNN().to(device)
-    models['upscale_net']={}
+    models['generative']=model.FSRCNN().to(device)
+    models['upscale']={}
     for scale in UPSCALE_FACTOR_LIST:
-        models['upscale_net'][scale]=model.Subpixel_Layer(models['generative_net'].output_channel,scale).to(device)
-    models['extra_net']=model.Extra_Layer().to(device)
+        models['upscale'][scale]=model.Subpixel_Layer(models['generative'].output_channel,scale).to(device)
+    models['extra']=model.Extra_Layer().to(device)
     for key in models.keys():
         print(models[key])
 
+    if CONTINUE==True:
+        for scale in UPSCALE_FACTOR_LIST:
+            utils.load_model(models,scale,SAVE_PATH)
+
+    best={}
+    for scale in UPSCALE_FACTOR_LIST:
+        best[scale]=Best()
+
     #set optimizer and criterion
     criterion=nn.MSELoss()
-    optimizer=optim.Adam(models['generative_net'].parameters(),lr=LEARNING_RATE)
+    optimizer=optim.Adam(models['generative'].parameters(),lr=LEARNING_RATE)
     for scale in UPSCALE_FACTOR_LIST:
-        optimizer.add_param_group({'params':models['upscale_net'][scale].parameters(),'lr':LEARNING_RATE*0.1})
-    optimizer.add_param_group({'params':models['extra_net'].parameters(),'lr':LEARNING_RATE*0.1})
+        optimizer.add_param_group({'params':models['upscale'][scale].parameters(),'lr':LEARNING_RATE*0.1})
+    optimizer.add_param_group({'params':models['extra'].parameters(),'lr':LEARNING_RATE*0.1})
 
     #set Meter to calculate the average of loss
     train_loss=meter.AverageMeter()
@@ -136,10 +137,17 @@ if __name__=='__main__':
         for iteration in range(ITER_PER_EPOCH):
             train(models,scale,train_data_loader,criterion,optimizer,train_loss,False)
         test(models,scale,eval_data_loader,criterion,optimizer,PSNR,SSIM,False)
+        if best[scale].best_psnr<PSNR.avg:
+            best[scale].best_psnr=PSNR.avg
+            best[scale].best_model=copy.deepcopy(models)
         #report loss and PSNR and save model
         print('{:0>3d}: train_loss: {:.8f}, PSNR: {:.3f} SSIM: {:.3f}, scale: {}'.format(epoch+1,train_loss.avg,PSNR.avg,SSIM.avg,scale))
-        save_model(models,scale,SAVE_PATH,epoch)
+        utils.save_model(models,scale,SAVE_PATH,epoch)
         train_loss.reset()
         PSNR.reset()
         SSIM.reset()
+
+    #save best model
+    for scale in UPSCALE_FACTOR_LIST:
+        utils.save_model(best[scale].best_model,scale,SAVE_PATH,-1)
 
