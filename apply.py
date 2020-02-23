@@ -1,20 +1,47 @@
 import torch
+import argparse
 from PIL import Image
-import sys
 import torchvision.transforms as transforms
 import model
+import utils
+import datasets
 
 if __name__=='__main__':
-    transfrom1=transforms.ToTensor()
-    transfrom2=transforms.ToPILImage()
-    input_image=transfrom1(Image.open(sys.argv[1]).convert('YCbCr'))
-    input_image=input_image.view(1,input_image.shape[0],input_image.shape[1],input_image.shape[2])
-    upscale_factor=int(sys.argv[2])
-    assert upscale_factor>=2 and upscale_factor<=4
-    ESPCN=model.model1(upscale_factor)
-    ESPCN.load_state_dict(torch.load(sys.argv[3]))
-    output_image=ESPCN(input_image)
-    print(output_image)
-    output_image=output_image.view([output_image.shape[1],output_image.shape[2],output_image.shape[3]])
-    output_image=transfrom2(output_image)
-    output_image.save(sys.argv[4])
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--image-path',type=str,required=True)
+    parser.add_argument('--output-path',type=str,required=True)
+    parser.add_argument('--model-path',type=str,required=True)
+    parser.add_argument('--scale',type=int,required=True)
+    parser.add_argument('--epoch',type=int,default=0)
+    args=parser.parse_args()
+
+    #add model
+    models={}
+    models['generative']=model.FSRCNN()#.to(device)
+    models['upscale']={}
+    models['upscale'][args.scale]=model.Subpixel_Layer(models['generative'].output_channel,args.scale)#.to(device)
+    models['extra']=model.Extra_Layer()#.to(device)
+    interpolate=False
+
+    #load model
+    utils.load_model(models,args.scale,args.model_path,args.epoch-1)
+    
+    #transform
+    transform=transforms.ToPILImage()
+    img=Image.open(args.image_path).convert('YCbCr')
+    width,height=img.size[0]*args.scale,img.size[1]*args.scale
+    YCbCr=img.split()
+    YCbCr=[datasets.transform_Tensor(channel) for channel in YCbCr]
+    YCbCr[0]=torch.unsqueeze(YCbCr[0],0)
+    with torch.no_grad():
+        YCbCr[0]=models['generative'](YCbCr[0])
+        YCbCr[0]=models['upscale'][args.scale](YCbCr[0])
+        YCbCr[0]=models['extra'](YCbCr[0])
+        YCbCr[0]=torch.squeeze(YCbCr[0],0)
+        YCbCr[0]=transform(YCbCr[0])
+        YCbCr[1]=transform(YCbCr[1])
+        YCbCr[2]=transform(YCbCr[2])
+        YCbCr[1]=YCbCr[1].resize((width,height),resample=Image.BICUBIC)
+        YCbCr[2]=YCbCr[2].resize((width,height),resample=Image.BICUBIC)
+        YCbCr=Image.merge('YCbCr',[YCbCr[0],YCbCr[1],YCbCr[2]])
+    YCbCr.save(args.output_path)
