@@ -4,7 +4,6 @@ from PIL import Image
 import torchvision.transforms as transforms
 import model
 import utils
-import datasets
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser()
@@ -31,7 +30,7 @@ if __name__=='__main__':
     img=Image.open(args.image_path).convert('YCbCr')
     width,height=img.size[0]*args.scale,img.size[1]*args.scale
     YCbCr=img.split()
-    YCbCr=[datasets.transform_Tensor(channel) for channel in YCbCr]
+    YCbCr=[utils.transform_Tensor(channel) for channel in YCbCr]
     YCbCr[0]=torch.unsqueeze(YCbCr[0],0)
     with torch.no_grad():
         YCbCr[0]=models['generative'](YCbCr[0])

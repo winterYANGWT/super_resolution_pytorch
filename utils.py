@@ -110,4 +110,12 @@ class RandomSelectedRotation(object):
     def __call__(self,sample):
         angle=random.choice(self.select_list)
         return transforms.functional.rotate(sample,angle)
+        
+ transform_PIL=transforms.Compose([transforms.RandomCrop(60),
+                                   utils.RandomSelectedRotation([0,90,180,270]),
+                                   transforms.RandomHorizontalFlip(),
+                                   transforms.RandomVerticalFlip()])
+                                   
+ transform_Tensor=transforms.Compose([transforms.ToTensor()])
+
 

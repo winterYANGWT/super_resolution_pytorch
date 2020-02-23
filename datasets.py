@@ -3,8 +3,6 @@ import pandas as pd
 import torchvision.transforms as transforms
 from PIL import Image
 import random
-import numpy as np
-import h5py
 import utils
 
 scale_factor=0
@@ -63,28 +61,42 @@ class TestDataset(torch.utils.data.Dataset):
 
         return images_Y
 
-transform_PIL=transforms.Compose([transforms.RandomCrop(60),
-                                 utils.RandomSelectedRotation([0,90,180,270]),
-                                 transforms.RandomHorizontalFlip(),
-                                 transforms.RandomVerticalFlip()])
-transform_Tensor=transforms.Compose([transforms.ToTensor()])
 
 #train data
-TrainData_T91=TrainDataset('./Datasets/TrainData_T91.csv',pil_transform=transform_PIL,tensor_transform=transform_Tensor)
-TrainData_BSD500=TrainDataset('./Datasets/TrainData_BSD500.csv',pil_transform=transform_PIL,tensor_transform=transform_Tensor)
-TrainData_DIV2K=TrainDataset('./Datasets/TrainData_DIV2K.csv',pil_transform=transform_PIL,tensor_transform=transform_Tensor)
+TrainData_T91=TrainDataset('./Datasets/TrainData_T91.csv',
+                           pil_transform=utils.transform_PIL,
+                           tensor_transform=utils.transform_Tensor)
+TrainData_BSD500=TrainDataset('./Datasets/TrainData_BSD500.csv',
+                              pil_transform=utils.transform_PIL,
+                              tensor_transform=utils.transform_Tensor)
+TrainData_DIV2K=TrainDataset('./Datasets/TrainData_DIV2K.csv',
+                             pil_transform=utils.transform_PIL,
+                             tensor_transform=utils.transform_Tensor)
+
 #eval data
-TestData_Urban100={2:TestDataset('./Datasets/TestData_Urban100_2.csv',transform=transform_Tensor),
-                   4:TestDataset('./Datasets/TestData_Urban100_4.csv',transform=transform_Tensor)}
-TestData_BSD100={2:TestDataset('./Datasets/TestData_BSD100_2.csv',transform=transform_Tensor),
-                 3:TestDataset('./Datasets/TestData_BSD100_3.csv',transform=transform_Tensor),
-                 4:TestDataset('./Datasets/TestData_BSD100_4.csv',transform=transform_Tensor)}
-TestData_Set5={2:TestDataset('./Datasets/TestData_Set5_2.csv',transform=transform_Tensor),
-               3:TestDataset('./Datasets/TestData_Set5_3.csv',transform=transform_Tensor),
-               4:TestDataset('./Datasets/TestData_Set5_4.csv',transform=transform_Tensor)}
-TestData_Set14={2:TestDataset('./Datasets/TestData_Set14_2.csv',transform=transform_Tensor),
-                3:TestDataset('./Datasets/TestData_Set14_3.csv',transform=transform_Tensor),
-                4:TestDataset('./Datasets/TestData_Set14_4.csv',transform=transform_Tensor)}
+TestData_Urban100={2:TestDataset('./Datasets/TestData_Urban100_2.csv',
+                                 transform=utils.transform_Tensor),
+                   4:TestDataset('./Datasets/TestData_Urban100_4.csv',
+                                 transform=utils.transform_Tensor)}
+TestData_BSD100={2:TestDataset('./Datasets/TestData_BSD100_2.csv',
+                               transform=utils.transform_Tensor),
+                 3:TestDataset('./Datasets/TestData_BSD100_3.csv',
+                               transform=utils.transform_Tensor),
+                 4:TestDataset('./Datasets/TestData_BSD100_4.csv',
+                               transform=utils.transform_Tensor)}
+TestData_Set5={2:TestDataset('./Datasets/TestData_Set5_2.csv',
+                             transform=utils.transform_Tensor),
+               3:TestDataset('./Datasets/TestData_Set5_3.csv',
+                             transform=utils.transform_Tensor),
+               4:TestDataset('./Datasets/TestData_Set5_4.csv',
+                             transform=utils.transform_Tensor)}
+TestData_Set14={2:TestDataset('./Datasets/TestData_Set14_2.csv',
+                              transform=utils.transform_Tensor),
+                3:TestDataset('./Datasets/TestData_Set14_3.csv',
+                              transform=utils.transform_Tensor),
+                4:TestDataset('./Datasets/TestData_Set14_4.csv',
+                              transform=utils.transform_Tensor)}
+
 #test data
 TestData_x2={'Urban100':TestData_Urban100[2],
              'BSD100':TestData_BSD100[2],
