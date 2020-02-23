@@ -73,13 +73,13 @@ def calc_SSIM(img1,img2,size_average=True):
         ret=ssim_map.mean()
     else:
         ret=ssim_map.mean(1).mean(1).mean(1)
-    return ret
+    return ret.item()
 
 def load_model(models,scale,output_dir,epoch):
-    if(epoch==-1):
+    if(epoch==0):
         load_path=os.path.join(output_dir,str(scale),'best')
     else:
-        load_path=os.path.join(output_dir,str(scale),str(epoch+1))
+        load_path=os.path.join(output_dir,str(scale),str(epoch))
 
     #load
     models['generative'].load_state_dict(torch.load(os.path.join(load_path,'generative')))
@@ -88,10 +88,10 @@ def load_model(models,scale,output_dir,epoch):
 
 def save_model(models,scale,output_dir,epoch):
     #check if output dir exists
-    if(epoch==-1):
+    if(epoch==0):
         save_path=os.path.join(output_dir,str(scale),'best')
     else:
-        save_path=os.path.join(output_dir,str(scale),str(epoch+1))
+        save_path=os.path.join(output_dir,str(scale),str(epoch))
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
@@ -111,11 +111,11 @@ class RandomSelectedRotation(object):
         angle=random.choice(self.select_list)
         return transforms.functional.rotate(sample,angle)
         
- transform_PIL=transforms.Compose([transforms.RandomCrop(60),
-                                   utils.RandomSelectedRotation([0,90,180,270]),
-                                   transforms.RandomHorizontalFlip(),
-                                   transforms.RandomVerticalFlip()])
+transform_PIL=transforms.Compose([transforms.RandomCrop(60),
+                                  RandomSelectedRotation([0,90,180,270]),
+                                  transforms.RandomHorizontalFlip(),
+                                  transforms.RandomVerticalFlip()])
                                    
- transform_Tensor=transforms.Compose([transforms.ToTensor()])
+transform_Tensor=transforms.Compose([transforms.ToTensor()])
 
 
