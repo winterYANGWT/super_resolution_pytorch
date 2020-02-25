@@ -28,9 +28,9 @@ if __name__=='__main__':
     
     #transform
     transform=transforms.ToPILImage()
-    img=Image.open(args.image_path).convert('YCbCr')
+    img=Image.open(args.image_path).convert('RGB')
     width,height=img.size[0]*args.scale,img.size[1]*args.scale
-    YCbCr=img.split()
+    YCbCr=utils.RGB2YCbCr(img)
     YCbCr=[datasets.transform_Tensor(channel) for channel in YCbCr]
     YCbCr[0]=torch.unsqueeze(YCbCr[0],0)
     with torch.no_grad():
@@ -38,10 +38,9 @@ if __name__=='__main__':
         YCbCr[0]=models['upscale'][args.scale](YCbCr[0])
         YCbCr[0]=models['extra'](YCbCr[0])
         YCbCr[0]=torch.squeeze(YCbCr[0],0)
-        YCbCr[0]=transform(YCbCr[0])
-        YCbCr[1]=transform(YCbCr[1])
-        YCbCr[2]=transform(YCbCr[2])
-        YCbCr[1]=YCbCr[1].resize((width,height),resample=Image.BICUBIC)
-        YCbCr[2]=YCbCr[2].resize((width,height),resample=Image.BICUBIC)
-        YCbCr=Image.merge('YCbCr',[YCbCr[0],YCbCr[1],YCbCr[2]])
-    YCbCr.save(args.output_path)
+        YCbCr=[transform(channel) for channel in YCbCr]
+        YCbCr[1:]=[channel.resize((width,height),resample=Image.BICUBIC) for channel in YCbCr[1:]]
+        RGB=utils.YCbCr2RGB(YCbCr)
+        RGB=[transform(channel).convert('L') for channel in RGB]
+        RGB=Image.merge('RGB',RGB)
+    RGB.save(args.output_path)

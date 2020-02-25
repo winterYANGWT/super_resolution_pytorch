@@ -76,10 +76,10 @@ def calc_SSIM(img1,img2,size_average=True):
     return ret
 
 def load_model(models,scale,output_dir,epoch):
-    if(epoch==-1):
+    if(epoch==0):
         load_path=os.path.join(output_dir,str(scale),'best')
     else:
-        load_path=os.path.join(output_dir,str(scale),str(epoch+1))
+        load_path=os.path.join(output_dir,str(scale),str(epoch))
 
     #load
     models['generative'].load_state_dict(torch.load(os.path.join(load_path,'generative')))
@@ -88,10 +88,10 @@ def load_model(models,scale,output_dir,epoch):
 
 def save_model(models,scale,output_dir,epoch):
     #check if output dir exists
-    if(epoch==-1):
+    if(epoch==0):
         save_path=os.path.join(output_dir,str(scale),'best')
     else:
-        save_path=os.path.join(output_dir,str(scale),str(epoch+1))
+        save_path=os.path.join(output_dir,str(scale),str(epoch))
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
@@ -133,9 +133,9 @@ def RGB2YCbCr(image):
     return (image_Y,image_Cb,image_Cr)
 
 def YCbCr2RGB(image):
-    image=np.array(image).astype(np.float32)
-    image_R=1.1644*(image[...,0]-16)+1.5960*(image[...,2]-128)
-    image_G=1.1644*(image[...,0]-16)-0.3918*(image[...,1]-128)-0.8130*(image[...,2]-128)
-    image_R=1.1644*(image[...,0]-16)+2.0172*(image[...,1]-128)
+    image=[np.array(channel).astype(np.float32) for channel in image]
+    image_R=1.1644*(image[0]-16)+1.5960*(image[2]-128)
+    image_G=1.1644*(image[0]-16)-0.3918*(image[1]-128)-0.8130*(image[2]-128)
+    image_B=1.1644*(image[0]-16)+2.0172*(image[1]-128)
     return (image_R,image_G,image_B)
 
