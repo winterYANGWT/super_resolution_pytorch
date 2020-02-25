@@ -73,7 +73,7 @@ def calc_SSIM(img1,img2,size_average=True):
         ret=ssim_map.mean()
     else:
         ret=ssim_map.mean(1).mean(1).mean(1)
-    return ret
+    return ret.item()
 
 def load_model(models,scale,output_dir,epoch):
     if(epoch==0):
@@ -110,6 +110,13 @@ class RandomSelectedRotation(object):
     def __call__(self,sample):
         angle=random.choice(self.select_list)
         return transforms.functional.rotate(sample,angle)
+        
+transform_PIL=transforms.Compose([transforms.RandomCrop(60),
+                                  RandomSelectedRotation([0,90,180,270]),
+                                  transforms.RandomHorizontalFlip(),
+                                  transforms.RandomVerticalFlip()])
+                                   
+transform_Tensor=transforms.Compose([transforms.ToTensor()])
 
 
 class Normalize(object):
