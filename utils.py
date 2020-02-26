@@ -101,6 +101,14 @@ def save_model(models,scale,output_dir,epoch):
     torch.save(models['extra'].state_dict(),os.path.join(save_path,'extra'))
 
 #dataset
+class Normalize(object):
+    def __init__(self):
+        super().__init__()
+
+    def __call__(self,sample):
+        return sample/255.0
+
+
 class RandomSelectedRotation(object):
     def __init__(self,select_list):
         super().__init__()
@@ -111,21 +119,14 @@ class RandomSelectedRotation(object):
         angle=random.choice(self.select_list)
         return transforms.functional.rotate(sample,angle)
         
+
 transform_PIL=transforms.Compose([transforms.RandomCrop(60),
                                   RandomSelectedRotation([0,90,180,270]),
                                   transforms.RandomHorizontalFlip(),
                                   transforms.RandomVerticalFlip()])
                                    
-transform_Tensor=transforms.Compose([transforms.ToTensor()])
-
-
-class Normalize(object):
-    def __init__(self):
-        super().__init__()
-
-    def __call__(self,sample):
-        return sample/255.0
-
+transform_Tensor=transforms.Compose([Normalize(),
+                                     transforms.ToTensor()])
 
 def RGB2Y(image):
     image=np.array(image).astype(np.float32)

@@ -10,7 +10,7 @@ import datasets
 import meter
 import utils
 
-BATCH_SIZE=8
+BATCH_SIZE=4
 UPSCALE_FACTOR_LIST=[2,3,4]
 EPOCH_START=0
 EPOCH=70*len(UPSCALE_FACTOR_LIST)
@@ -107,8 +107,8 @@ if __name__=='__main__':
     criterion=nn.MSELoss()
     optimizer=optim.Adam(models['generative'].parameters(),lr=LEARNING_RATE)
     for scale in UPSCALE_FACTOR_LIST:
-        optimizer.add_param_group({'params':models['upscale'][scale].parameters(),'lr':LEARNING_RATE})
-    optimizer.add_param_group({'params':models['extra'].parameters(),'lr':LEARNING_RATE})
+        optimizer.add_param_group({'params':models['upscale'][scale].parameters(),'lr':LEARNING_RATE*0.1})
+    optimizer.add_param_group({'params':models['extra'].parameters(),'lr':LEARNING_RATE*0.1})
 
     #set Meter to calculate the average of loss
     train_loss=meter.AverageMeter()
