@@ -34,6 +34,8 @@ class Dense_Block(nn.Module):
 
 
 #train and test
+device=torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
 def calc_PSNR(mse):
     return 10*math.log10(1/mse)
 
@@ -47,20 +49,20 @@ def create_window(window_size,channel=1):
     window=_2D_window.expand(channel,1,window_size,window_size).contiguous()
     return window
 
-window=create_window(11,1)
+window=create_window(11,1).to(device)
 
 def calc_SSIM(img1,img2,size_average=True):
     L=1
     pad=0
     _,channel,height,width=img1.size()
-    mu1=F.conv2d(img1,window,padding=pad,groups=channel)
-    mu2=F.conv2d(img2,window,padding=pad,groups=channel)
+    mu1=F.conv2d(img1,window,padding=pad,groups=channel).to(device)
+    mu2=F.conv2d(img2,window,padding=pad,groups=channel).to(device)
     mu1_sq=mu1.pow(2)
     mu2_sq=mu2.pow(2)
     mu12=mu1*mu2
-    sigma1_sq=F.conv2d(img1**2,window,padding=pad,groups=channel)-mu1_sq
-    sigma2_sq=F.conv2d(img2**2,window,padding=pad,groups=channel)-mu2_sq
-    sigma12=F.conv2d(img1*img2,window,padding=pad,groups=channel)-mu12
+    sigma1_sq=F.conv2d(img1**2,window,padding=pad,groups=channel).to(device)-mu1_sq
+    sigma2_sq=F.conv2d(img2**2,window,padding=pad,groups=channel).to(device)-mu2_sq
+    sigma12=F.conv2d(img1*img2,window,padding=pad,groups=channel).to(device)-mu12
     C1=(0.01*L)**2
     C2=(0.03*L)**2
     v1=2.0*sigma12+C2
