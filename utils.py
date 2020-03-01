@@ -69,7 +69,6 @@ def calc_SSIM(img1,img2,size_average=True):
     v2=2.0*mu12+C1
     v3=sigma1_sq+sigma2_sq+C2
     v4=mu1_sq+mu2_sq+C1
-    cs=torch.mean(v1/v2)
     ssim_map=(v1*v2)/(v3*v4)
     if size_average:
         ret=ssim_map.mean()
