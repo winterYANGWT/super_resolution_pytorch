@@ -8,15 +8,30 @@ import os
 import torchvision.transforms as transforms
 from PIL import Image
 
+class VDSR_Block(nn.Moudle):
+    def __init__(self,input_size,output_size):
+        super()._init__()
+        self.conv=nn.Conv2d(input_size,output_size,
+                            kernel_size=3,
+                            stride=1,
+                            padding=1)
+        self.activation=nn.PReLU()
+
+    def forward(self,x):
+        x=self.conv(x)
+        x=self.activation(x)
+        return x
+
+
 class Residual_Block(nn.Module):
-    def __init__(self,in_channels,out_channels):
+    def __init__(self,input_size,output_size):
         super().__init__()
-        self.conv=nn.Sequential(nn.Conv2d(in_channels,out_channels,
+        self.conv=nn.Sequential(nn.Conv2d(input_size,output_size,
                                           kernel_size=3,
                                           stride=1,
                                           padding=1),
                                 nn.PReLU(),
-                                nn.Conv2d(out_channels,out_channels,
+                                nn.Conv2d(output_size,output_size,
                                           kernel_size=3,
                                           stride=1,
                                           padding=1))
@@ -31,6 +46,31 @@ class Residual_Block(nn.Module):
 
 class Dense_Block(nn.Module):
     pass
+
+
+class Spatial_Pyramid_Pooling(nn.Module):
+    def __init__(self,num_levels,pool_type):
+        super().__init__()
+        self.num_levels=num_levels
+        self.pool_type=pool_type
+
+    def forward(self,x):
+        num,c,h,w=x.size()
+        for level in range(1,self.num_levels+1):
+            kernel_size=(math.ceil(h/level),math.ceil(w/level))
+            stride=kernel_size
+            pooling=(math.floor((kernel_size[0]*level-h+1)/2),math.floor((kernel_size[1]*level-w+1)/2))
+
+            if self.pool_type=='max_pool':
+                tensor=F.max_pool2d(x,kernel_size=kernel_size,stride=stride,padding=pooling).view(num,-1)
+            else:
+                tensor=F.avg_pool2d(x,kernel_size=kernel_size,stride=stride,padding=pooling).view(num,-1)
+
+            if level==1:
+                x_flatten=tensor.view(num,-1)
+            else:
+                x_flatten=tensor.cat((x_flattexrn,tensor.view(num,-1)),1)
+        return x_flatten
 
 
 #train and test

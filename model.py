@@ -84,6 +84,7 @@ class ESPCN(nn.Module):
                                                        stride=1,
                                                        padding=1),
                                             nn.Tanh())
+
     def forward(self,x):
         x=self.nonlinear_mapping(x)
         return x
@@ -92,92 +93,35 @@ class ESPCN(nn.Module):
 class VDSR(nn.Module):
     def __init__(self):
         super().__init__()
-        self.conv=nn.Sequential(nn.Conv2d(1,64,
-                                          kernel_size=3,
-                                          stride=1,
-                                          padding=1),
-                                nn.Conv2d(1,64,
-                                          kernel_size=3,
-                                          stride=1,
-                                          padding=1),
-                                nn.Conv2d(1,64,
-                                          kernel_size=3,
-                                          stride=1,
-                                          padding=1),
-                                nn.Conv2d(1,64,
-                                          kernel_size=3,
-                                          stride=1,
-                                          padding=1),
-                                nn.Conv2d(1,64,
-                                          kernel_size=3,
-                                          stride=1,
-                                          padding=1),
-                                nn.Conv2d(1,64,
-                                          kernel_size=3,
-                                          stride=1,
-                                          padding=1),
-                                nn.Conv2d(1,64,
-                                          kernel_size=3,
-                                          stride=1,
-                                          padding=1),
-                                nn.Conv2d(1,64,
-                                          kernel_size=3,
-                                          stride=1,
-                                          padding=1),
-                                nn.Conv2d(1,64,
-                                          kernel_size=3,
-                                          stride=1,
-                                          padding=1),
-                                nn.Conv2d(1,64,
-                                          kernel_size=3,
-                                          stride=1,
-                                          padding=1),
-                                nn.Conv2d(1,64,
-                                          kernel_size=3,
-                                          stride=1,
-                                          padding=1),
-                                nn.Conv2d(1,64,
-                                          kernel_size=3,
-                                          stride=1,
-                                          padding=1),
-                                nn.Conv2d(1,64,
-                                          kernel_size=3,
-                                          stride=1,
-                                          padding=1),
-                                nn.Conv2d(1,64,
-                                          kernel_size=3,
-                                          stride=1,
-                                          padding=1),
-                                nn.Conv2d(1,64,
-                                          kernel_size=3,
-                                          stride=1,
-                                          padding=1),
-                                nn.Conv2d(1,64,
-                                          kernel_size=3,
-                                          stride=1,
-                                          padding=1),
-                                nn.Conv2d(1,64,
-                                          kernel_size=3,
-                                          stride=1,
-                                          padding=1),
-                                nn.Conv2d(1,64,
-                                          kernel_size=3,
-                                          stride=1,
-                                          padding=1),
-                                nn.Conv2d(1,64,
-                                          kernel_size=3,
-                                          stride=1,
-                                          padding=1),
-                                nn.Conv2d(1,64,
+        self.conv=nn.Sequential(utils.VDSR_Block(1,64),
+                                utils.VDSR_Block(64,64),
+                                utils.VDSR_Block(64,64),
+                                utils.VDSR_Block(64,64),
+                                utils.VDSR_Block(64,64),
+                                utils.VDSR_Block(64,64),
+                                utils.VDSR_Block(64,64),
+                                utils.VDSR_Block(64,64),
+                                utils.VDSR_Block(64,64),
+                                utils.VDSR_Block(64,64),
+                                utils.VDSR_Block(64,64),
+                                utils.VDSR_Block(64,64),
+                                utils.VDSR_Block(64,64),
+                                utils.VDSR_Block(64,64),
+                                utils.VDSR_Block(64,64),
+                                utils.VDSR_Block(64,64),
+                                utils.VDSR_Block(64,64),
+                                utils.VDSR_Block(64,64),
+                                utils.VDSR_Block(64,64),
+                                nn.Conv2d(64,1,
                                           kernel_size=3,
                                           stride=1,
                                           padding=1))
 
     def forward(self,x):
         #input is ILR
-        copy=x
+        x_copy=x
         x=self.conv(x)
-        x=x+copy
+        x=x+x_copy
         return x
 
 
@@ -185,42 +129,31 @@ class SRResNet(nn.Module):
     def __init__(self):
         super().__init__()
         self.output_channel=64
-        self.feature_extract=nn.Sequential(nn.Conv2d(1,8,
+        self.feature_extract=nn.Sequential(nn.Conv2d(1,64,
                                                      kernel_size=3,
                                                      stride=1,
                                                      padding=1),
                                            nn.PReLU(),
-                                           nn.Conv2d(8,16,
+                                           nn.Conv2d(64,64,
                                                      kernel_size=3,
                                                      stride=1,
                                                      padding=1),
                                            nn.PReLU(),
-                                           nn.Conv2d(16,32,
+                                           nn.Conv2d(64,64,
                                                      kernel_size=3,
                                                      stride=1,
                                                      padding=1),
                                            nn.PReLU(),
-                                           nn.Conv2d(32,64,
+                                           nn.Conv2d(64,64,
                                                      kernel_size=3,
                                                      stride=1,
                                                      padding=1),
                                            nn.PReLU())
-        self.residual_block=nn.Sequential(utils.Residual_Block(64,64),
-                                          utils.Residual_Block(64,64),
-                                          utils.Residual_Block(64,64),
-                                          utils.Residual_Block(64,64),
-                                          utils.Residual_Block(64,64),
-                                          utils.Residual_Block(64,64),
-                                          utils.Residual_Block(64,64),
-                                          utils.Residual_Block(64,64),
-                                          utils.Residual_Block(64,64),
-                                          utils.Residual_Block(64,64),
-                                          utils.Residual_Block(64,64),
-                                          utils.Residual_Block(64,64),
-                                          utils.Residual_Block(64,64),
-                                          utils.Residual_Block(64,64),
-                                          utils.Residual_Block(64,64),
-                                          utils.Residual_Block(64,64))
+        self.residual_block=nn.Sequential(utils.Residual_Block(64),
+                                          utils.Residual_Block(64),
+                                          utils.Residual_Block(64),
+                                          utils.Residual_Block(64),
+                                          utils.Residual_Block(64))
         self.skip_connection=nn.Sequential(nn.Conv2d(64,self.output_channel,
                                                      kernel_size=3,
                                                      stride=1,
@@ -251,3 +184,71 @@ class Subpixel_Layer(nn.Module):
         x=self.subpixel(x)
         return x
     
+
+class Linear(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self,x):
+        return x
+
+
+class VGG(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.net=nn.Sequetial(nn.Conv2d(1,64,
+                                        kernel_size=3,
+                                        stride=1,
+                                        padding=1),
+                              nn.LeakyReLU(0.2,inplace=True),
+                              nn.Conv2d(64,64,
+                                        kernel_size=3,
+                                        stride=2,
+                                        padding=1),
+                              nn.BatchNorm2d(64),
+                              nn.LeakyReLU(0.2,inplace=True))
+                              nn.Conv2d(64,128,
+                                        kernel_size=3,
+                                        stride=1,
+                                        padding=1),
+                              nn.BatchNorm2d(128),
+                              nn.LeakyReLU(0.2,inplace=True),
+                              nn.Conv2d(128,128,
+                                        kernel_size=3,
+                                        stride=2,
+                                        padding=1),
+                              nn.BatchNorm2d(128),
+                              nn.LeakyReLU(0.2,inplace=True))
+                              nn.Conv2d(128,256,
+                                        kernel_size=3,
+                                        stride=1,
+                                        padding=1),
+                              nn.BatchNorm2d(256),
+                              nn.LeakyReLU(0.2,inplace=True),
+                              nn.Conv2d(256,256,
+                                        kernel_size=3,
+                                        stride=2,
+                                        padding=1),
+                              nn.BatchNorm2d(256),
+                              nn.LeakyReLU(0.2,inplace=True),
+                              nn.Conv2d(256,512,
+                                        kernel_size=3,
+                                        stride=1,
+                                        padding=1),
+                              nn.BatchNorm2d(512),
+                              nn.LeakyReLU(0.2,inplace=True),
+                              nn.Conv2d(512,512,
+                                        kernel_size=3,
+                                        stride=1,
+                                        padding=1),
+                              nn.BatchNorm2d(512),
+                              nn.LeakyReLU(0.2,inplace=True))
+                              nn.AdaptiveAvgPool2d(1),
+                              nn.Conv2d(512,1024,kernel_size=1),
+                              nn.LeakyReLU(0.2,inplace=True),
+                              nn.Conv2d(1024,1,kernel_size=1),
+                              nn.Sigmoid())
+    
+        def forward(self,x):
+            x=self.net(x)
+            return x
