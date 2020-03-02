@@ -16,6 +16,14 @@ class Extra_Layer(nn.Module):
                                            padding=4))
         return self
 
+    def SRDenseNet(self):
+        self.extra=True
+        self.layer=nn.Sequential(nn.Conv2d(1,1,
+                                           kernel_size=3,
+                                           stride=1,
+                                           padding=1)
+        return self
+
     def forward(self,x):
         if self.extra==True:
             x=self.layer(x)
@@ -165,6 +173,51 @@ class SRResNet(nn.Module):
         x=self.residual_block(x)
         x=self.skip_connection(x)
         x=x+x_copy
+        return x
+
+
+class SRDenseNet(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.output_channel=256
+        self.lowlevel=nn.Sequential(nn.Conv2d(1,128,
+                                              kernel_size=3,
+                                              stride=1,
+                                              padding=1),
+                                    nn.PReLU())
+        self.dense1=utils.Dense_Block(128)
+        self.dense2=utils.Dense_Block(256)
+        self.dense3=utils.Dense_Block(384)
+        self.dense4=utils.Dense_Block(512)
+        self.dense5=utils.Dense_Block(640)
+        self.dense6=utils.Dense_Block(768)
+        self.dense7=utils.Dense_Block(896)
+        self.dense8=utils.Dense_Block(1024)
+        self.bottleneck=nn.Sequential(nn.Conv2d(1152,self.output_channel,
+                                                kernel_size=3,
+                                                stride=1,
+                                                padding=1),
+                                      nn.PReLU())
+
+    def forward(self,x):
+        residual=self.lowlevel(x)
+        x=self.dense1(residual)
+        concat=torch.cat([residual,x],1)
+        x=self.dense2(concat)
+        concat=torch.cat([concat,x],1)
+        x=self.dense3(concat)
+        concat=torch.cat([concat,x],1)
+        x=self.dense4(concat)
+        concat=torch.cat([concat,x],1)
+        x=self.dense5(concat)
+        concat=torch.cat([concat,x],1)
+        x=self.dense6(concat)
+        concat=torch.cat([concat,x],1)
+        x=self.dense7(concat)
+        concat=torch.cat([concat,x],1)
+        x=self.dense8(concat)
+        concat=torch.cat([concat,x],1)
+        x=self.bottleneck(concat)
         return x
 
 

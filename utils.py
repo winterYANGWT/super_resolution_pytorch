@@ -45,7 +45,66 @@ class Residual_Block(nn.Module):
 
 
 class Dense_Block(nn.Module):
-    pass
+    def __init__(self,input_size):
+        super().__init__()
+        self.conv1=nn.Sequential(nn.Conv2d(input_size,16,
+                                           kernel_size=3,
+                                           stride=1,
+                                           padding=1),
+                                 nn.PReLU())
+        self.conv2=nn.Sequential(nn.Conv2d(16,16,
+                                           kernel_size=3,
+                                           stride=1,
+                                           padding=1),
+                                 nn.PReLU())
+        self.conv3=nn.Sequential(nn.Conv2d(32,16,
+                                           kernel_size=3,
+                                           stride=1,
+                                           padding=1),
+                                 nn.PReLU())
+        self.conv4=nn.Sequential(nn.Conv2d(48,16,
+                                           kernel_size=3,
+                                           stride=1,
+                                           padding=1),
+                                 nn.PReLU())
+        self.conv5=nn.Sequential(nn.Conv2d(64,16,
+                                           kernel_size=3,
+                                           stride=1,
+                                           padding=1),
+                                 nn.PReLU())
+        self.conv6=nn.Sequential(nn.Conv2d(80,16,
+                                           kernel_size=3,
+                                           stride=1,
+                                           padding=1),
+                                 nn.PReLU())
+        self.conv7=nn.Sequential(nn.Conv2d(96,16,
+                                           kernel_size=3,
+                                           stride=1,
+                                           padding=1),
+                                 nn.PReLU())
+        self.conv8=nn.Sequential(nn.Conv2d(112,16,
+                                           kernel_size=3,
+                                           stride=1,
+                                           padding=1),
+                                 nn.PReLU())
+
+    def forward(self,x):
+        conv1=self.conv1(x)
+        conv2=self.conv2(conv1)
+        conv2_dense=torch.cat([conv1,conv2],1)
+        conv3=self.conv3(conv2_dense)
+        conv3_dense=torch.cat([conv2_dense,conv3],1)
+        conv4=self.conv4(conv3_dense)
+        conv4_dense=torch.cat([conv3_dense,conv4],1)
+        conv5=self.conv5(conv4_dense)
+        conv5_dense=torch.cat([conv4_dense,conv5],1)
+        conv6=self.conv6(conv5_dense)
+        conv6_dense=torch.cat([conv5_dense,conv6],1)
+        conv7=self.conv7(conv6_dense)
+        conv7_dense=torch.cat([conv6_dense,conv7],1)
+        conv8=self.conv8(conv7_dense)
+        conv8_dense=torch.cat([conv7_dense,conv8],1)
+        return conv8_dense
 
 
 class Spatial_Pyramid_Pooling(nn.Module):
