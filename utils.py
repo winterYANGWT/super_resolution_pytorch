@@ -8,7 +8,7 @@ import os
 import torchvision.transforms as transforms
 from PIL import Image
 
-class VDSR_Block(nn.Moudle):
+class VDSR_Block(nn.Module):
     def __init__(self,input_size,output_size):
         super()._init__()
         self.conv=nn.Conv2d(input_size,output_size,
