@@ -220,7 +220,7 @@ class RandomSelectedRotation(object):
         return transforms.functional.rotate(sample,angle)
         
 
-transform_PIL=transforms.Compose([transforms.RandomCrop(60),
+transform_PIL=transforms.Compose([transforms.RandomCrop(96),
                                   RandomSelectedRotation([0,90,180,270]),
                                   transforms.RandomHorizontalFlip(),
                                   transforms.RandomVerticalFlip()])
