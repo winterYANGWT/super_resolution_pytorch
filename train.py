@@ -14,11 +14,11 @@ BATCH_SIZE=1
 UPSCALE_FACTOR_LIST=[2,3,4]
 EPOCH_START=0*3
 EPOCH=10*3
-ITER_PER_EPOCH=20
+ITER_PER_EPOCH=10
 LEARNING_RATE=0.1**3
-SAVE_PATH='./Model/SRDenseNet_BSD500_234'
-LEARNING_DECAY_LIST=[0.8,0.9,1]
+SAVE_PATH='./Model/FSRCNN_DIV2K_234'
 CONTINUE=(EPOCH_START!=0)
+torch.set_num_threads(2)
 
 def train(models,upscale_factor,data_loader,criterion,optimizer,meter,interpolate):
     #extract model
@@ -52,15 +52,15 @@ if __name__=='__main__':
     device=torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     #load data
-    train_data=datasets.TrainData_BSD500
+    train_data=datasets.TrainData_DIV2K
 
     #add model
     models={}
-    models['generative']=model.SRDenseNet().to(device)
+    models['generative']=model.FSRCNN().to(device)
     models['upscale']={}
     for scale in UPSCALE_FACTOR_LIST:
         models['upscale'][scale]=model.Subpixel_Layer(models['generative'].output_channel,scale).to(device)
-    models['extra']=model.Extra_Layer().SRDenseNet().to(device)
+    models['extra']=model.Extra_Layer().to(device)
 
     if CONTINUE==True:
         for scale in UPSCALE_FACTOR_LIST:
@@ -81,11 +81,6 @@ if __name__=='__main__':
 
     #running
     for epoch in range(EPOCH_START,EPOCH_START+EPOCH):
-        #update learning rate
-        if((epoch+1)==(EPOCH*LEARNING_DECAY_LIST[decay])):
-            for param_group in optimizer.param_groups:
-                param_group['lr']=param_group['lr']*0.5
-            decay=decay+1
         #select upscale factor
         scale=UPSCALE_FACTOR_LIST[epoch%len(UPSCALE_FACTOR_LIST)]
         datasets.scale_factor=scale
@@ -96,6 +91,6 @@ if __name__=='__main__':
                                                       num_workers=4)
         for iteration in range(ITER_PER_EPOCH):
             train(models,scale,train_data_loader,criterion,optimizer,train_loss,False)
-        print('{:0>3d}: train_loss: {:.8f}'.format(epoch+1,train_loss.avg))
+        print('{:0>3d}: train_loss: {:.8f}, scale: {}'.format(epoch+1,train_loss.avg,epoch+1))
         utils.save_model(models,scale,SAVE_PATH,epoch//len(UPSCALE_FACTOR_LIST)+1)
         train_loss.reset()
