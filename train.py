@@ -91,6 +91,6 @@ if __name__=='__main__':
                                                       num_workers=4)
         for iteration in range(ITER_PER_EPOCH):
             train(models,scale,train_data_loader,criterion,optimizer,train_loss,False)
-        print('{:0>3d}: train_loss: {:.8f}, scale: {}'.format(epoch+1,train_loss.avg,epoch+1))
+        print('{:0>3d}: train_loss: {:.8f}, scale: {}'.format(epoch+1,train_loss.avg,scale))
         utils.save_model(models,scale,SAVE_PATH,epoch//len(UPSCALE_FACTOR_LIST)+1)
         train_loss.reset()
