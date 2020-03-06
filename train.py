@@ -12,10 +12,10 @@ import utils
 
 BATCH_SIZE=1
 UPSCALE_FACTOR_LIST=[2,3,4]
-EPOCH_START=0*3
+EPOCH_START=10*3
 EPOCH=10*3
 ITER_PER_EPOCH=10
-LEARNING_RATE=0.1**3
+LEARNING_RATE=0.1**4
 SAVE_PATH='./Model/FSRCNN_DIV2K_234'
 CONTINUE=(EPOCH_START!=0)
 torch.set_num_threads(2)
@@ -64,7 +64,7 @@ if __name__=='__main__':
 
     if CONTINUE==True:
         for scale in UPSCALE_FACTOR_LIST:
-            utils.load_model(models,scale,SAVE_PATH,EPOCH_START//len(UPSCALE_FACTOR_LIST)+1)
+            utils.load_model(models,scale,SAVE_PATH,EPOCH_START//len(UPSCALE_FACTOR_LIST))
     else:
         for key in models.keys():
             print(models[key])
