@@ -200,6 +200,31 @@ def save_model(models,scale,output_dir,epoch):
     torch.save(models['upscale'][scale].state_dict(),os.path.join(save_path,'upscale'))
     torch.save(models['extra'].state_dict(),os.path.join(save_path,'extra'))
 
+def save_result(PSNR,SSIM,best,output_dir,name):
+    #check if output dir exists
+    save_path=os.path.join(output_dir,name)
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+    
+    PSNR=np.array(PSNR)
+    SSIM=np.array(SSIM)
+    best=np.array(best)
+    
+    #save
+    np.save(os.path.join(save_path,'PSNR.npy'),PSNR)
+    np.save(os.path.join(save_path,'SSIM.npy'),SSIM)
+    np.save(os.path.join(save_path,'best.npy'),best)
+
+def load_result(output_dir,name):
+    #check if output dir exists
+    load_path=os.path.join(output_dir,name)
+    
+    PSNR=np.save(os.path.join(save_path,'PSNR.npy'))
+    SSIM=np.save(os.path.join(save_path,'SSIM.npy'))
+    best=np.save(os.path.join(save_path,'best.npy'))
+    return PSNR,SSIM,best
+
+
 #dataset
 class Normalize(object):
     def __init__(self):
