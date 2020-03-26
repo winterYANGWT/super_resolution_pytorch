@@ -8,9 +8,9 @@ import os
 import torchvision.transforms as transforms
 from PIL import Image
 
-class VDSR_Block(nn.Module):
+class VDSRBlock(nn.Module):
     def __init__(self,input_size,output_size):
-        super()._init__()
+        super().__init__()
         self.conv=nn.Conv2d(input_size,output_size,
                             kernel_size=3,
                             stride=1,
@@ -23,7 +23,7 @@ class VDSR_Block(nn.Module):
         return x
 
 
-class Residual_Block(nn.Module):
+class ResidualBlock(nn.Module):
     def __init__(self,input_size,output_size):
         super().__init__()
         self.conv=nn.Sequential(nn.Conv2d(input_size,output_size,
@@ -44,7 +44,7 @@ class Residual_Block(nn.Module):
         return x
 
 
-class Dense_Block(nn.Module):
+class DenseBlock(nn.Module):
     def __init__(self,input_size):
         super().__init__()
         self.conv1=nn.Sequential(nn.Conv2d(input_size,16,
@@ -107,7 +107,63 @@ class Dense_Block(nn.Module):
         return conv8_dense
 
 
-class Spatial_Pyramid_Pooling(nn.Module):
+class ResidualDenseBlock(nn.Module):
+    def __init__(self,nf=64,gc=32):
+        super().__init__()
+        self.conv1=nn.Sequential(nn.Conv2d(nf,gc,
+                                           kernel_size=3,
+                                           stride=1,
+                                           padding=1),
+                                nn.PReLU())
+        self.conv2=nn.Sequential(nn.Conv2d(nf+1*gc,gc,
+                                           kernel_size=3,
+                                           stride=1,
+                                           padding=1),
+                                nn.PReLU())
+        self.conv3=nn.Sequential(nn.Conv2d(nf+2*gc,gc,
+                                           kernel_size=3,
+                                           stride=1,
+                                           padding=1),
+                                nn.PReLU())
+        self.conv4=nn.Sequential(nn.Conv2d(nf+3*gc,gc,
+                                           kernel_size=3,
+                                           stride=1,
+                                           padding=1),
+                                nn.PReLU())
+        self.conv5=nn.Sequential(nn.Conv2d(nf+4*gc,nf,
+                                           kernel_size=3,
+                                           stride=1,
+                                           padding=1),
+                                nn.PReLU())
+        
+    def forward(self,x):
+        conv1=self.conv1(x)
+        conv1_dense=torch.cat([x,conv1],1)
+        conv2=self.conv2(conv1_dense)
+        conv2_dense=torch.cat([conv1_dense,conv2],1)
+        conv3=self.conv3(conv2_dense)
+        conv3_dense=torch.cat([conv2_dense,conv3],1)
+        conv4=self.conv4(conv3_dense)
+        conv4_dense=torch.cat([conv3_dense,conv4],1)
+        conv5=self.conv5(conv4_dense)
+        return conv5*0.2+x
+
+
+class ResidualResidualDenseBlock(nn.Module):
+    def __init__(self,nf,gc=32):
+        self.RDB1=ResidualDenseBlock(nf,gc)
+        self.RDB2=ResidualDenseBlock(nf,gc)
+        self.RDB3=ResidualDenseBlock(nf,gc)
+
+    def forward(self,x):
+        RDB1=self.RDB1(x)
+        RDB2=self.RDB2(RDB1)
+        RDB3=self.RDB3(RDB2)
+        return RDB3
+
+
+
+class SpatialPyramidPooling(nn.Module):
     def __init__(self,num_levels,pool_type):
         super().__init__()
         self.num_levels=num_levels
@@ -128,7 +184,7 @@ class Spatial_Pyramid_Pooling(nn.Module):
             if level==1:
                 x_flatten=tensor.view(num,-1)
             else:
-                x_flatten=tensor.cat((x_flattexrn,tensor.view(num,-1)),1)
+                x_flatten=tensor.cat((x_flatten,tensor.view(num,-1)),1)
         return x_flatten
 
 
@@ -219,9 +275,9 @@ def load_result(output_dir,name):
     #check if output dir exists
     load_path=os.path.join(output_dir,name)
     
-    PSNR=np.save(os.path.join(save_path,'PSNR.npy'))
-    SSIM=np.save(os.path.join(save_path,'SSIM.npy'))
-    best=np.save(os.path.join(save_path,'best.npy'))
+    PSNR=np.load(os.path.join(load_path,'PSNR.npy'))
+    SSIM=np.load(os.path.join(load_path,'SSIM.npy'))
+    best=np.load(os.path.join(load_path,'best.npy'))
     return PSNR,SSIM,best
 
 

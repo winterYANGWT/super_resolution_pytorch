@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import utils
 
-class Extra_Layer(nn.Module):
+class ExtraLayer(nn.Module):
     def __init__(self):
         super().__init__()
         self.extra=False
@@ -71,11 +71,11 @@ class FSRCNN(nn.Module):
                                   nn.PReLU())
 
     def forward(self,x):
-        x=self.feature_extract(x)
-        x=self.shrink(x)
-        x=self.nonlinear_mapping(x)
-        x=self.expand(x)
-        return x
+        feature_extract=self.feature_extract(x)
+        shrink=self.shrink(feature_extract)
+        nolinear=self.nonlinear_mapping(shrink)
+        expand=self.expand(nolinear)
+        return expand
 
 
 class ESPCN(nn.Module):
@@ -94,32 +94,32 @@ class ESPCN(nn.Module):
                                             nn.Tanh())
 
     def forward(self,x):
-        x=self.nonlinear_mapping(x)
-        return x
+        nonlinear_mapping=self.nonlinear_mapping(x)
+        return nonlinear_mapping
 
 
 class VDSR(nn.Module):
     def __init__(self):
         super().__init__()
-        self.conv=nn.Sequential(utils.VDSR_Block(1,64),
-                                utils.VDSR_Block(64,64),
-                                utils.VDSR_Block(64,64),
-                                utils.VDSR_Block(64,64),
-                                utils.VDSR_Block(64,64),
-                                utils.VDSR_Block(64,64),
-                                utils.VDSR_Block(64,64),
-                                utils.VDSR_Block(64,64),
-                                utils.VDSR_Block(64,64),
-                                utils.VDSR_Block(64,64),
-                                utils.VDSR_Block(64,64),
-                                utils.VDSR_Block(64,64),
-                                utils.VDSR_Block(64,64),
-                                utils.VDSR_Block(64,64),
-                                utils.VDSR_Block(64,64),
-                                utils.VDSR_Block(64,64),
-                                utils.VDSR_Block(64,64),
-                                utils.VDSR_Block(64,64),
-                                utils.VDSR_Block(64,64),
+        self.conv=nn.Sequential(utils.VDSRBlock(1,64),
+                                utils.VDSRBlock(64,64),
+                                utils.VDSRBlock(64,64),
+                                utils.VDSRBlock(64,64),
+                                utils.VDSRBlock(64,64),
+                                utils.VDSRBlock(64,64),
+                                utils.VDSRBlock(64,64),
+                                utils.VDSRBlock(64,64),
+                                utils.VDSRBlock(64,64),
+                                utils.VDSRBlock(64,64),
+                                utils.VDSRBlock(64,64),
+                                utils.VDSRBlock(64,64),
+                                utils.VDSRBlock(64,64),
+                                utils.VDSRBlock(64,64),
+                                utils.VDSRBlock(64,64),
+                                utils.VDSRBlock(64,64),
+                                utils.VDSRBlock(64,64),
+                                utils.VDSRBlock(64,64),
+                                utils.VDSRBlock(64,64),
                                 nn.Conv2d(64,1,
                                           kernel_size=3,
                                           stride=1,
@@ -127,10 +127,8 @@ class VDSR(nn.Module):
 
     def forward(self,x):
         #input is ILR
-        x_copy=x
-        x=self.conv(x)
-        x=x+x_copy
-        return x
+        conv=self.conv(x)
+        return x+conv
 
 
 class SRResNet(nn.Module):
@@ -157,23 +155,21 @@ class SRResNet(nn.Module):
                                                      stride=1,
                                                      padding=1),
                                            nn.PReLU())
-        self.residual_block=nn.Sequential(utils.Residual_Block(64),
-                                          utils.Residual_Block(64),
-                                          utils.Residual_Block(64),
-                                          utils.Residual_Block(64),
-                                          utils.Residual_Block(64))
+        self.RB=nn.Sequential(utils.ResidualBlock(64,64),
+                              utils.ResidualBlock(64,64),
+                              utils.ResidualBlock(64,64),
+                              utils.ResidualBlock(64,64),
+                              utils.ResidualBlock(64,64))
         self.skip_connection=nn.Sequential(nn.Conv2d(64,self.output_channel,
                                                      kernel_size=3,
                                                      stride=1,
                                                      padding=1))
 
     def forward(self,x):
-        x=self.feature_extract(x)
-        x_copy=x
-        x=self.residual_block(x)
-        x=self.skip_connection(x)
-        x=x+x_copy
-        return x
+        feature_extract=self.feature_extract(x)
+        RB=self.RB(feature_extract)
+        skip_connection=self.skip_connection(RB)
+        return x+skip_connection
 
 
 class SRDenseNet(nn.Module):
@@ -185,14 +181,14 @@ class SRDenseNet(nn.Module):
                                               stride=1,
                                               padding=1),
                                     nn.PReLU())
-        self.dense1=utils.Dense_Block(128)
-        self.dense2=utils.Dense_Block(256)
-        self.dense3=utils.Dense_Block(384)
-        self.dense4=utils.Dense_Block(512)
-        self.dense5=utils.Dense_Block(640)
-        self.dense6=utils.Dense_Block(768)
-        self.dense7=utils.Dense_Block(896)
-        self.dense8=utils.Dense_Block(1024)
+        self.DB1=utils.DenseBlock(128)
+        self.DB2=utils.DenseBlock(256)
+        self.DB3=utils.DenseBlock(384)
+        self.DB4=utils.DenseBlock(512)
+        self.DB5=utils.DenseBlock(640)
+        self.DB6=utils.DenseBlock(768)
+        self.DB7=utils.DenseBlock(896)
+        self.DB8=utils.DenseBlock(1024)
         self.bottleneck=nn.Sequential(nn.Conv2d(1152,self.output_channel,
                                                 kernel_size=3,
                                                 stride=1,
@@ -200,28 +196,73 @@ class SRDenseNet(nn.Module):
                                       nn.PReLU())
 
     def forward(self,x):
-        residual=self.lowlevel(x)
-        x=self.dense1(residual)
-        concat=torch.cat([residual,x],1)
-        x=self.dense2(concat)
-        concat=torch.cat([concat,x],1)
-        x=self.dense3(concat)
-        concat=torch.cat([concat,x],1)
-        x=self.dense4(concat)
-        concat=torch.cat([concat,x],1)
-        x=self.dense5(concat)
-        concat=torch.cat([concat,x],1)
-        x=self.dense6(concat)
-        concat=torch.cat([concat,x],1)
-        x=self.dense7(concat)
-        concat=torch.cat([concat,x],1)
-        x=self.dense8(concat)
-        concat=torch.cat([concat,x],1)
-        x=self.bottleneck(concat)
-        return x
+        lowlevel=self.lowlevel(x)
+        DB1=self.DB1(lowlevel)
+        concat=torch.cat([lowlevel,DB1],1)
+        DB2=self.DB2(concat)
+        concat=torch.cat([concat,DB2],1)
+        DB3=self.DB3(concat)
+        concat=torch.cat([concat,DB3],1)
+        DB4=self.DB4(concat)
+        concat=torch.cat([concat,DB4],1)
+        DB5=self.dense5(concat)
+        concat=torch.cat([concat,DB5],1)
+        DB6=self.dense6(concat)
+        concat=torch.cat([concat,DB6],1)
+        DB7=self.dense7(concat)
+        concat=torch.cat([concat,DB7],1)
+        DB8=self.dense8(concat)
+        concat=torch.cat([concat,DB8],1)
+        bottleneck=self.bottleneck(concat)
+        return bottleneck
 
 
-class Subpixel_Layer(nn.Module):
+
+class RRDBNet(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.output_channel=64
+        self.conv=nn.Sequential(nn.Conv2d(1,64,
+                                kernel_size=3,
+                                stride=1,
+                                padding=1),
+                                nn.PReLU())
+        self.RRDB=nn.Sequential(utils.ResidualResidualDenseBlock(64,32),
+                                utils.ResidualResidualDenseBlock(64,32),
+                                utils.ResidualResidualDenseBlock(64,32),
+                                utils.ResidualResidualDenseBlock(64,32),
+                                utils.ResidualResidualDenseBlock(64,32),
+                                utils.ResidualResidualDenseBlock(64,32),
+                                utils.ResidualResidualDenseBlock(64,32),
+                                utils.ResidualResidualDenseBlock(64,32),
+                                utils.ResidualResidualDenseBlock(64,32),
+                                utils.ResidualResidualDenseBlock(64,32),
+                                utils.ResidualResidualDenseBlock(64,32),
+                                utils.ResidualResidualDenseBlock(64,32),
+                                utils.ResidualResidualDenseBlock(64,32),
+                                utils.ResidualResidualDenseBlock(64,32),
+                                utils.ResidualResidualDenseBlock(64,32),
+                                utils.ResidualResidualDenseBlock(64,32),
+                                utils.ResidualResidualDenseBlock(64,32),
+                                utils.ResidualResidualDenseBlock(64,32),
+                                utils.ResidualResidualDenseBlock(64,32),
+                                utils.ResidualResidualDenseBlock(64,32),
+                                utils.ResidualResidualDenseBlock(64,32),
+                                utils.ResidualResidualDenseBlock(64,32),
+                                utils.ResidualResidualDenseBlock(64,32))
+        self.conv2=nn.Sequential(nn.Conv2d(64,64,
+                                kernel_size=3,
+                                stride=1,
+                                padding=1),
+                                nn.PReLU())
+
+    def forward(self,x):
+        conv1=self.conv1(x)
+        RRDB=self.RRDB(conv1)
+        conv2=self.conv2(RRDB)
+        return conv1+conv2
+
+class SubPixelLayer(nn.Module):
     def __init__(self,input_channel,upscale_factor):
         super().__init__()
         self.subpixel=nn.Sequential(nn.Conv2d(input_channel,
@@ -234,8 +275,8 @@ class Subpixel_Layer(nn.Module):
                                     nn.PReLU())
 
     def forward(self,x):
-        x=self.subpixel(x)
-        return x
+        subpixel=self.subpixel(x)
+        return subpixel
     
 
 class Linear(nn.Module):
@@ -302,6 +343,6 @@ class VGG(nn.Module):
                               nn.Conv2d(1024,1,kernel_size=1),
                               nn.Sigmoid())
     
-        def forward(self,x):
-            x=self.net(x)
-            return x
+    def forward(self,x):
+        net=self.net(x)
+        return net
