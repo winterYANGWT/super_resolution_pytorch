@@ -1,11 +1,12 @@
 import torch
 import torch.nn as nn
+import torch.backends.cudnn as cudnn
 import numpy as np
 import model
 import datasets
 import meter
 import utils
-import torch.backends.cudnn as cudnn
+import assessment
 
 UPSCALE_FACTOR=2
 LOAD_PATH='./Model/FSRCNN_DIV2K_234'
@@ -33,10 +34,10 @@ def test(models,upscale_factor,data_loader,criterion,PSNR_meter,SSIM_meter,inter
         outputs=upscale(outputs)
         outputs=extra(outputs)
         loss=criterion(outputs,labels)
-        SSIM_meter.update(utils.calc_SSIM(outputs,labels),len(inputs))
+        SSIM_meter.update(assessment.calc_SSIM(outputs,labels),len(inputs))
         del generative
         del outputs
-        PSNR_meter.update(utils.calc_PSNR(loss.item()),len(inputs))
+        PSNR_meter.update(assessment.calc_PSNR(loss.item()),len(inputs))
 
 if __name__=='__main__':
     #set device
