@@ -23,6 +23,20 @@ class ExtraLayer(nn.Module):
                                            stride=1,
                                            padding=1))
         return self
+    
+    def RRDBNet(self):
+        self.extra=True
+        self.layer=nn.Sequential(nn.Conv2d(1,64,
+                                           kernel_size=3,
+                                           stride=1,
+                                           padding=1),
+                                nn.PReLU(),
+                                nn.Conv2d(64,1,
+                                          kernel_size=3,
+                                          stride=1,
+                                          padding=1),
+                                nn.PReLU())
+        return self
 
     def forward(self,x):
         if self.extra==True:
