@@ -8,6 +8,8 @@ import os
 import torchvision.transforms as transforms
 from PIL import Image
 
+device=torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
 class VDSRBlock(nn.Module):
     def __init__(self,input_size,output_size):
         super().__init__()
@@ -196,9 +198,11 @@ def load_model(models,scale,output_dir,epoch):
         load_path=os.path.join(output_dir,str(scale),str(epoch))
 
     #load
-    models['generative'].load_state_dict(torch.load(os.path.join(load_path,'generative')))
-    (models['upscale'])[scale].load_state_dict(torch.load(os.path.join(load_path,'upscale')))
-    models['extra'].load_state_dict(torch.load(os.path.join(load_path,'extra')))
+    for key in models.keys():
+        if type(model[key]) is not dict:
+            models[key].load_state_dict(torch.load(os.path.join(load_path,key),map_location=device))
+        else:
+            models[key][scale].load_state_dict(torch.load(os.path.join(load_path,key),map_location=device))
 
 def save_model(models,scale,output_dir,epoch):
     #check if output dir exists
@@ -210,9 +214,11 @@ def save_model(models,scale,output_dir,epoch):
         os.makedirs(save_path)
 
     #save
-    torch.save(models['generative'].state_dict(),os.path.join(save_path,'generative'))
-    torch.save(models['upscale'][scale].state_dict(),os.path.join(save_path,'upscale'))
-    torch.save(models['extra'].state_dict(),os.path.join(save_path,'extra'))
+    for key in model.keys():
+        if type(model[key]) is not dict:
+            torch.save(models[key].state_dict(),os.path.join(save_path,key))
+        else:
+            torch.save(models[key][scale].state_dict(),os.path.join(save_path,key))
 
 def save_result(PSNR,SSIM,best,output_dir,name):
     #check if output dir exists
