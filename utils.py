@@ -199,7 +199,7 @@ def load_model(models,scale,output_dir,epoch):
 
     #load
     for key in models.keys():
-        if type(model[key]) is not dict:
+        if type(models[key]) is not dict:
             models[key].load_state_dict(torch.load(os.path.join(load_path,key),map_location=device))
         else:
             models[key][scale].load_state_dict(torch.load(os.path.join(load_path,key),map_location=device))
@@ -214,8 +214,8 @@ def save_model(models,scale,output_dir,epoch):
         os.makedirs(save_path)
 
     #save
-    for key in model.keys():
-        if type(model[key]) is not dict:
+    for key in models.keys():
+        if type(models[key]) is not dict:
             torch.save(models[key].state_dict(),os.path.join(save_path,key))
         else:
             torch.save(models[key][scale].state_dict(),os.path.join(save_path,key))
