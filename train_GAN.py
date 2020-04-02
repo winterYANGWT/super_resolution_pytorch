@@ -13,7 +13,7 @@ import utils
 BATCH_SIZE=1
 UPSCALE_FACTOR_LIST=[4]
 EPOCH_START=0*3
-EPOCH=10*3
+EPOCH=5*3
 ITER_PER_EPOCH=10
 LEARNING_RATE=0.1**4
 SAVE_PATH='./Model/SRGAN_DIV2K_234'
@@ -43,18 +43,23 @@ def train(models,upscale_factor,data_loader,criterion,optimizer,meter,interpolat
         outputs=upscale(outputs)
         outputs=extra(outputs)
 
-        real_outs=adversarial(labels)
-        fake_outs=adversarial(outputs).mean()
-        d_loss=criterion['D'](real_outs,fake_outs)
-        optimizer['D'].zero_grad()
+        real_predicts=discriminator(labels)
+        fake_predicts=discriminator(outputs)
+        ones=torch.ones(BATCH_SIZE,1)
+        zeros=torch.zeros(BATCH_SIZE,1)
+        real_loss=criterion['discriminator'](real_predicts,ones)
+        fake_loss=criterion['discriminator'](fake_predicts,zeros)
+        d_loss=real_loss+fake_loss
+        optimizer['dicriminator'].zero_grad()
         d_loss.backward(retain_graph=True)
-        optimizer['D'].step()
-
-        g_loss=criterion['G'](fake_out,outputs,labels)
-        meter.update(g_loss.item(),len(inputs))
-        optimizer['G'].zero_grad()
+        optimizer['discriminator'].step()
+        
+        train_loss=criterion['mse'](outputs,labels);
+        g_loss=criterion['generator'](fake_predicts,outputs,labels)
+        meter.update(train_loss.item(),len(inputs))
+        optimizer['generator'].zero_grad()
         g_loss.backward()
-        optimizer['G'].step()
+        optimizer['generator'].step()
     
 if __name__=='__main__':
     #set device 
@@ -72,7 +77,7 @@ if __name__=='__main__':
     models['generative']=model.SRResNet().to(device)
     models['upscale']={}
     for scale in UPSCALE_FACTOR_LIST:
-        models['upscale'][scale]=model.Subpixel_Layer(models['generative'].output_channel,scale).to(device)
+        models['upscale'][scale]=model.SubPixelLayer(models['generative'].output_channel,scale).to(device)
     models['extra']=model.Extra_Layer().SRResNet().to(device)
     models['discriminator']=model.VGG().to(device)    
     
@@ -85,6 +90,7 @@ if __name__=='__main__':
 
     #set optimizer and criterion
     criterion={}
+    criterion['mse']=loss.MSELoss()
     criterion['gernerator']=loss.SRGANLoss()
     criterion['discriminator']=loss.BCELoss()
     opimizer={}
