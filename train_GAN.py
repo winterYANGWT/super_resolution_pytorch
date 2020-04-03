@@ -9,23 +9,23 @@ import model
 import datasets
 import meter
 import utils
+import loss
 
 BATCH_SIZE=1
 UPSCALE_FACTOR_LIST=[4]
-EPOCH_START=0*3
-EPOCH=5*3
+EPOCH_START=20*1
+EPOCH=20
 ITER_PER_EPOCH=10
-LEARNING_RATE=0.1**4
-SAVE_PATH='./Model/SRGAN_DIV2K_234'
+LEARNING_RATE=0.1**4*0.5
+SAVE_PATH='./Model/SRGAN_DIV2K_4'
 CONTINUE=(EPOCH_START!=0)
-torch.set_num_threads(4)
 
 def train(models,upscale_factor,data_loader,criterion,optimizer,meter,interpolate):
     #extract model
     generative=models['generative']
     upscale=models['upscale'][upscale_factor]
     extra=models['extra']
-    disciminator=models['discriminator']
+    discriminator=models['discriminator']
 
     #train
     generative.train()
@@ -45,12 +45,12 @@ def train(models,upscale_factor,data_loader,criterion,optimizer,meter,interpolat
 
         real_predicts=discriminator(labels)
         fake_predicts=discriminator(outputs)
-        ones=torch.ones(BATCH_SIZE,1)
-        zeros=torch.zeros(BATCH_SIZE,1)
+        ones=torch.ones(BATCH_SIZE,1).to(device)
+        zeros=torch.zeros(BATCH_SIZE,1).to(device)
         real_loss=criterion['discriminator'](real_predicts,ones)
         fake_loss=criterion['discriminator'](fake_predicts,zeros)
         d_loss=real_loss+fake_loss
-        optimizer['dicriminator'].zero_grad()
+        optimizer['discriminator'].zero_grad()
         d_loss.backward(retain_graph=True)
         optimizer['discriminator'].step()
         
@@ -78,28 +78,30 @@ if __name__=='__main__':
     models['upscale']={}
     for scale in UPSCALE_FACTOR_LIST:
         models['upscale'][scale]=model.SubPixelLayer(models['generative'].output_channel,scale).to(device)
-    models['extra']=model.Extra_Layer().SRResNet().to(device)
-    models['discriminator']=model.VGG().to(device)    
+    models['extra']=model.ExtraLayer().SRResNet().to(device)
     
     if CONTINUE==True:
+        models['discriminator']=model.VGG().to(device)    
         for scale in UPSCALE_FACTOR_LIST:
             utils.load_model(models,scale,SAVE_PATH,EPOCH_START//len(UPSCALE_FACTOR_LIST))
     else:
+        utils.load_model(models,scale,SAVE_PATH,-1)
+        models['discriminator']=model.VGG().to(device)    
         for key in models.keys():
             print(models[key])
 
     #set optimizer and criterion
     criterion={}
     criterion['mse']=loss.MSELoss()
-    criterion['gernerator']=loss.SRGANLoss()
+    criterion['generator']=loss.SRGANLoss()
     criterion['discriminator']=loss.BCELoss()
-    opimizer={}
-    optimizer['gernerator']=optim.Adam(models['generative'].parameters(),
+    optimizer={}
+    optimizer['generator']=optim.Adam(models['generative'].parameters(),
                                        lr=LEARNING_RATE)
     for scale in UPSCALE_FACTOR_LIST:
-        optimizer['gernerator'].add_param_group({'params':models['upscale'][scale].parameters(),
+        optimizer['generator'].add_param_group({'params':models['upscale'][scale].parameters(),
                                                  'lr':LEARNING_RATE*0.1})
-    optimizer['gernerator'].add_param_group({'params':models['extra'].parameters(),
+    optimizer['generator'].add_param_group({'params':models['extra'].parameters(),
                                              'lr':LEARNING_RATE*0.1})
     optimizer['discriminator']=optim.Adam(models['discriminator'].parameters(),
                                           lr=LEARNING_RATE)

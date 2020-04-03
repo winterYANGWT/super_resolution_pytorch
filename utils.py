@@ -192,8 +192,10 @@ class SpatialPyramidPooling(nn.Module):
 
 #train and test
 def load_model(models,scale,output_dir,epoch):
-    if(epoch==0):
+    if epoch==0:
         load_path=os.path.join(output_dir,str(scale),'best')
+    elif epoch==-1:
+        load_path=os.path.join(output_dir,str(scale),'pretrained')
     else:
         load_path=os.path.join(output_dir,str(scale),str(epoch))
 
@@ -206,8 +208,10 @@ def load_model(models,scale,output_dir,epoch):
 
 def save_model(models,scale,output_dir,epoch):
     #check if output dir exists
-    if(epoch==0):
+    if epoch==0:
         save_path=os.path.join(output_dir,str(scale),'best')
+    elif epoch==-1:
+        save_path=os.path.join(output_dir,str(scale),'pretrained')
     else:
         save_path=os.path.join(output_dir,str(scale),str(epoch))
     if not os.path.exists(save_path):
