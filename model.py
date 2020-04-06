@@ -247,11 +247,11 @@ class RRDBNet(nn.Module):
     def __init__(self):
         super().__init__()
         self.output_channel=64
-        self.conv=nn.Sequential(nn.Conv2d(1,64,
-                                kernel_size=3,
-                                stride=1,
-                                padding=1),
-                                nn.PReLU())
+        self.conv1=nn.Sequential(nn.Conv2d(1,64,
+                                 kernel_size=3,
+                                 stride=1,
+                                 padding=1),
+                                 nn.PReLU())
         self.RRDB=nn.Sequential(utils.ResidualResidualDenseBlock(64,32),
                                 utils.ResidualResidualDenseBlock(64,32),
                                 utils.ResidualResidualDenseBlock(64,32),
@@ -365,8 +365,7 @@ class VGG(nn.Module):
                                nn.AdaptiveAvgPool2d(1),
                                nn.Conv2d(512,1024,kernel_size=1),
                                nn.LeakyReLU(0.2,inplace=True),
-                               nn.Conv2d(1024,1,kernel_size=1),
-                               nn.Sigmoid())
+                               nn.Conv2d(1024,1,kernel_size=1))
     
     def forward(self,x):
         net=self.net(x)

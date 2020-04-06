@@ -153,6 +153,7 @@ class ResidualDenseBlock(nn.Module):
 
 class ResidualResidualDenseBlock(nn.Module):
     def __init__(self,nf,gc=32):
+        super().__init__()
         self.RDB1=ResidualDenseBlock(nf,gc)
         self.RDB2=ResidualDenseBlock(nf,gc)
         self.RDB3=ResidualDenseBlock(nf,gc)
@@ -161,7 +162,7 @@ class ResidualResidualDenseBlock(nn.Module):
         RDB1=self.RDB1(x)
         RDB2=self.RDB2(RDB1)
         RDB3=self.RDB3(RDB2)
-        return RDB3
+        return RDB3*0.2+x
 
 
 

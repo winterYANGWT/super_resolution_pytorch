@@ -11,12 +11,12 @@ import meter
 import utils
 
 BATCH_SIZE=1
-UPSCALE_FACTOR_LIST=[3]
-EPOCH_START=15*3
-EPOCH=5*3
+UPSCALE_FACTOR_LIST=[4]
+EPOCH_START=0*3
+EPOCH=1*3
 ITER_PER_EPOCH=10
-LEARNING_RATE=0.1**3*0.125
-SAVE_PATH='./Model/FSRCNN_DIV2K_3'
+LEARNING_RATE=0.1**4
+SAVE_PATH='./Model/ESRGAN_DIV2K_4'
 CONTINUE=(EPOCH_START!=0)
 
 def train(models,upscale_factor,data_loader,criterion,optimizer,meter,interpolate):
@@ -58,11 +58,11 @@ if __name__=='__main__':
 
     #add model
     models={}
-    models['generative']=model.FSRCNN().to(device)
+    models['generative']=model.RRDBNet().to(device)
     models['upscale']={}
     for scale in UPSCALE_FACTOR_LIST:
         models['upscale'][scale]=model.SubPixelLayer(models['generative'].output_channel,scale).to(device)
-    models['extra']=model.ExtraLayer().to(device)
+    models['extra']=model.ExtraLayer().RRDBNet().to(device)
 
     if CONTINUE==True:
         for scale in UPSCALE_FACTOR_LIST:
@@ -90,5 +90,5 @@ if __name__=='__main__':
         for iteration in range(ITER_PER_EPOCH):
             train(models,scale,train_data_loader,criterion,optimizer,train_loss,False)
         print('{:0>3d}: train_loss: {:.8f}, scale: {}'.format(epoch+1,train_loss.avg,scale))
-        utils.save_model(models,scale,SAVE_PATH,epoch//len(UPSCALE_FACTOR_LIST)+1)
+        utils.save_model(models,scale,SAVE_PATH,-1)
         train_loss.reset()

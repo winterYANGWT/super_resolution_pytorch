@@ -13,10 +13,10 @@ import loss
 
 BATCH_SIZE=1
 UPSCALE_FACTOR_LIST=[4]
-EPOCH_START=20*1
+EPOCH_START=0*1
 EPOCH=20
 ITER_PER_EPOCH=10
-LEARNING_RATE=0.1**4*0.5
+LEARNING_RATE=0.1**4
 SAVE_PATH='./Model/SRGAN_DIV2K_4'
 CONTINUE=(EPOCH_START!=0)
 
@@ -42,21 +42,19 @@ def train(models,upscale_factor,data_loader,criterion,optimizer,meter,interpolat
         outputs=generative(inputs)
         outputs=upscale(outputs)
         outputs=extra(outputs)
-
         real_predicts=discriminator(labels)
         fake_predicts=discriminator(outputs)
-        ones=torch.ones(BATCH_SIZE,1).to(device)
-        zeros=torch.zeros(BATCH_SIZE,1).to(device)
-        real_loss=criterion['discriminator'](real_predicts,ones)
-        fake_loss=criterion['discriminator'](fake_predicts,zeros)
-        d_loss=real_loss+fake_loss
+        
+        #train discriminator
+        d_loss=criterion['discriminator'](real_predicts,fake_predicts)
         optimizer['discriminator'].zero_grad()
         d_loss.backward(retain_graph=True)
         optimizer['discriminator'].step()
         
+        #train generator
         train_loss=criterion['mse'](outputs,labels);
-        g_loss=criterion['generator'](fake_predicts,outputs,labels)
         meter.update(train_loss.item(),len(inputs))
+        g_loss=criterion['generator'](real_predicts,fake_predicts,labels,outputs)
         optimizer['generator'].zero_grad()
         g_loss.backward()
         optimizer['generator'].step()
@@ -93,8 +91,8 @@ if __name__=='__main__':
     #set optimizer and criterion
     criterion={}
     criterion['mse']=loss.MSELoss()
-    criterion['generator']=loss.SRGANLoss()
-    criterion['discriminator']=loss.BCELoss()
+    criterion['generator']=loss.SRGANGLoss()
+    criterion['discriminator']=loss.SRGANDLoss()
     optimizer={}
     optimizer['generator']=optim.Adam(models['generative'].parameters(),
                                        lr=LEARNING_RATE)
