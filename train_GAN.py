@@ -13,12 +13,13 @@ import loss
 
 BATCH_SIZE=1
 UPSCALE_FACTOR_LIST=[4]
-EPOCH_START=0*1
-EPOCH=20
+EPOCH_START=0*3
+EPOCH=5*3
 ITER_PER_EPOCH=10
 LEARNING_RATE=0.1**4
 SAVE_PATH='./Model/SRGAN_DIV2K_4'
 CONTINUE=(EPOCH_START!=0)
+PRETRAINED=True
 
 def train(models,upscale_factor,data_loader,criterion,optimizer,meter,interpolate):
     #extract model
@@ -33,12 +34,12 @@ def train(models,upscale_factor,data_loader,criterion,optimizer,meter,interpolat
     extra.train()
     discriminator.train()
     for inputs,labels in data_loader:
+        #forward
         if interpolate==True:
             inputs=F.interpolate(inputs,scale_factor=upscale_factor).to(device)    
         else:
             inputs=inputs.to(device)
         labels=labels.to(device)
-
         outputs=generative(inputs)
         outputs=upscale(outputs)
         outputs=extra(outputs)
@@ -52,9 +53,12 @@ def train(models,upscale_factor,data_loader,criterion,optimizer,meter,interpolat
         optimizer['discriminator'].step()
         
         #train generator
-        train_loss=criterion['mse'](outputs,labels);
+        train_loss=criterion['content'](outputs,labels)
+        if PRETRAINED==True:
+            g_loss=train_loss
+        else:
+            g_loss=criterion['generator'](real_predicts,fake_predicts,labels,outputs)
         meter.update(train_loss.item(),len(inputs))
-        g_loss=criterion['generator'](real_predicts,fake_predicts,labels,outputs)
         optimizer['generator'].zero_grad()
         g_loss.backward()
         optimizer['generator'].step()
@@ -77,20 +81,27 @@ if __name__=='__main__':
     for scale in UPSCALE_FACTOR_LIST:
         models['upscale'][scale]=model.SubPixelLayer(models['generative'].output_channel,scale).to(device)
     models['extra']=model.ExtraLayer().SRResNet().to(device)
-    
-    if CONTINUE==True:
-        models['discriminator']=model.VGG().to(device)    
-        for scale in UPSCALE_FACTOR_LIST:
-            utils.load_model(models,scale,SAVE_PATH,EPOCH_START//len(UPSCALE_FACTOR_LIST))
+    models['discriminator']=model.VGG().to(device)
+    if PRETRAINED==True:
+        if CONTINUE==True:
+            for scale in UPSCALE_FACTOR_LIST:
+                utils.load_model(models,scale,SAVE_PATH,-1)
+        else:
+            for key in models.keys():
+                print(models[key])
     else:
-        utils.load_model(models,scale,SAVE_PATH,-1)
-        models['discriminator']=model.VGG().to(device)    
-        for key in models.keys():
-            print(models[key])
+        if CONTINUE==True:
+            for scale in UPSCALE_FACTOR_LIST:
+                utils.load_model(models,scale,SAVE_PATH,EPOCH_START//len(UPSCALE_FACTOR_LIST))
+        else:
+            for scale in UPSCALE_FACTOR_LIST:
+                utils.load_model(models,scale,SAVE_PATH,-1)
+            for key in models.keys():
+                print(models[key])
 
     #set optimizer and criterion
     criterion={}
-    criterion['mse']=loss.MSELoss()
+    criterion['content']=loss.MSELoss()
     criterion['generator']=loss.SRGANGLoss()
     criterion['discriminator']=loss.SRGANDLoss()
     optimizer={}
@@ -116,5 +127,11 @@ if __name__=='__main__':
         for iteration in range(ITER_PER_EPOCH):
             train(models,scale,train_data_loader,criterion,optimizer,train_loss,False)
         print('{:0>3d}: train_loss: {:.8f}, scale: {}'.format(epoch+1,train_loss.avg,scale))
-        utils.save_model(models,scale,SAVE_PATH,epoch//len(UPSCALE_FACTOR_LIST)+1)
+
+        #save
+        if PRETRAINED==True:
+            utils.save_model(models,scale,SAVE_PATH,-1)
+        else:
+            utils.save_model(models,scale,SAVE_PATH,epoch//len(UPSCALE_FACTOR_LIST)+1)
         train_loss.reset()
+
