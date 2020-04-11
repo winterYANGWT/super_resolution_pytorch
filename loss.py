@@ -16,7 +16,7 @@ class BCELoss(nn.Module):
 class L1Loss(nn.Module):
     def __init__(self):
         super().__init__()
-        self.l1=nn.L1Loss().to(device)
+        self.l1=nn.SmoothL1Loss().to(device)
 
     def forward(self,output_images,target_images):
         return self.l1(output_images,target_images)
