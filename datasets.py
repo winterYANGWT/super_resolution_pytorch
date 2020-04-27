@@ -105,7 +105,9 @@ TestData={2:TestData_x2,
           4:TestData_x4}
 
 if __name__=='__main__':
-    loader=torch.utils.data.DataLoader(dataset=TrainData_T91,batch_size=8)
+    scale_factor=4
+    format_type='RGB'
+    loader=torch.utils.data.DataLoader(dataset=TrainData_DIV2K,batch_size=8)
     for images in loader:
         print(images)
 
