@@ -3,14 +3,19 @@ import torch.nn as nn
 import torch.nn.functional as F
 import utils
 
+channel={'RGB':3,
+         'Y':1}
+
 class ExtraLayer(nn.Module):
-    def __init__(self):
+    def __init__(self,input_channel,format_type):
         super().__init__()
         self.extra=False
+        self.input_channel=input_channel
+        self.output_channel=channel[format_type]
 
     def SRResNet(self):
         self.extra=True
-        self.layer=nn.Sequential(nn.Conv2d(1,1,
+        self.layer=nn.Sequential(nn.Conv2d(self.input_channel,self.output_channel,
                                            kernel_size=9,
                                            stride=1,
                                            padding=4))
@@ -18,7 +23,7 @@ class ExtraLayer(nn.Module):
 
     def SRDenseNet(self):
         self.extra=True
-        self.layer=nn.Sequential(nn.Conv2d(1,1,
+        self.layer=nn.Sequential(nn.Conv2d(self.input_channel,self.output_channel,
                                            kernel_size=3,
                                            stride=1,
                                            padding=1))
@@ -26,12 +31,12 @@ class ExtraLayer(nn.Module):
     
     def RRDBNet(self):
         self.extra=True
-        self.layer=nn.Sequential(nn.Conv2d(1,64,
+        self.layer=nn.Sequential(nn.Conv2d(self.input_channel,64,
                                            kernel_size=3,
                                            stride=1,
                                            padding=1),
                                 nn.PReLU(),
-                                nn.Conv2d(64,1,
+                                nn.Conv2d(64,self.output_channel,
                                           kernel_size=3,
                                           stride=1,
                                           padding=1),
@@ -44,10 +49,10 @@ class ExtraLayer(nn.Module):
         return x      
 
 class FSRCNN(nn.Module):
-    def __init__(self):
+    def __init__(self,format_type):
         super().__init__()
         self.output_channel=56
-        self.feature_extract=nn.Sequential(nn.Conv2d(1,56,
+        self.feature_extract=nn.Sequential(nn.Conv2d(channel[format_type],56,
                                            kernel_size=5,
                                            stride=1,
                                            padding=2),
@@ -77,8 +82,7 @@ class FSRCNN(nn.Module):
                                                       stride=1,
                                                       padding=1),
                                             nn.PReLU())
-        self.expand=nn.Sequential(nn.Conv2d(12,
-                                            self.output_channel,
+        self.expand=nn.Sequential(nn.Conv2d(12,self.output_channel,
                                             kernel_size=1,
                                             stride=1,
                                             padding=0),
@@ -93,10 +97,10 @@ class FSRCNN(nn.Module):
 
 
 class ESPCN(nn.Module):
-    def __init__(self):
+    def __init__(self,format_type):
         super().__init__()
         self.output_channel=32
-        self.nonlinear_mapping=nn.Sequential(nn.Conv2d(1,64,
+        self.nonlinear_mapping=nn.Sequential(nn.Conv2d(channel[format_type],64,
                                                        kernel_size=5,
                                                        stride=1,
                                                        padding=2),
@@ -113,9 +117,9 @@ class ESPCN(nn.Module):
 
 
 class VDSR(nn.Module):
-    def __init__(self):
+    def __init__(self,format_type):
         super().__init__()
-        self.conv=nn.Sequential(utils.VDSRBlock(1,64),
+        self.conv=nn.Sequential(utils.VDSRBlock(channel[format_type],64),
                                 utils.VDSRBlock(64,64),
                                 utils.VDSRBlock(64,64),
                                 utils.VDSRBlock(64,64),
@@ -134,7 +138,7 @@ class VDSR(nn.Module):
                                 utils.VDSRBlock(64,64),
                                 utils.VDSRBlock(64,64),
                                 utils.VDSRBlock(64,64),
-                                nn.Conv2d(64,1,
+                                nn.Conv2d(64,channel[format_type],
                                           kernel_size=3,
                                           stride=1,
                                           padding=1))
@@ -146,10 +150,10 @@ class VDSR(nn.Module):
 
 
 class SRResNet(nn.Module):
-    def __init__(self):
+    def __init__(self,format_type):
         super().__init__()
         self.output_channel=64
-        self.feature_extract=nn.Sequential(nn.Conv2d(1,64,
+        self.feature_extract=nn.Sequential(nn.Conv2d(channel[format_type],64,
                                                      kernel_size=3,
                                                      stride=1,
                                                      padding=1),
@@ -198,10 +202,10 @@ class SRResNet(nn.Module):
 
 
 class SRDenseNet(nn.Module):
-    def __init__(self):
+    def __init__(self,format_type):
         super().__init__()
         self.output_channel=256
-        self.lowlevel=nn.Sequential(nn.Conv2d(1,128,
+        self.lowlevel=nn.Sequential(nn.Conv2d(channel[format_type],128,
                                               kernel_size=3,
                                               stride=1,
                                               padding=1),
@@ -244,13 +248,13 @@ class SRDenseNet(nn.Module):
 
 
 class RRDBNet(nn.Module):
-    def __init__(self):
+    def __init__(self,format_type):
         super().__init__()
         self.output_channel=64
-        self.conv1=nn.Sequential(nn.Conv2d(1,64,
-                                 kernel_size=3,
-                                 stride=1,
-                                 padding=1),
+        self.conv1=nn.Sequential(nn.Conv2d(channel[format_type],64,
+                                           kernel_size=3,
+                                           stride=1,
+                                           padding=1),
                                  nn.PReLU())
         self.RRDB=nn.Sequential(utils.ResidualResidualDenseBlock(64,32),
                                 utils.ResidualResidualDenseBlock(64,32),
@@ -275,10 +279,10 @@ class RRDBNet(nn.Module):
                                 utils.ResidualResidualDenseBlock(64,32),
                                 utils.ResidualResidualDenseBlock(64,32),
                                 utils.ResidualResidualDenseBlock(64,32))
-        self.conv2=nn.Sequential(nn.Conv2d(64,64,
-                                kernel_size=3,
-                                stride=1,
-                                padding=1),
+        self.conv2=nn.Sequential(nn.Conv2d(64,self.output_channel,
+                                           kernel_size=3,
+                                           stride=1,
+                                           padding=1),
                                 nn.PReLU())
 
     def forward(self,x):
@@ -288,10 +292,10 @@ class RRDBNet(nn.Module):
         return conv1+conv2
 
 class SubPixelLayer(nn.Module):
-    def __init__(self,input_channel,upscale_factor):
+    def __init__(self,input_channel,output_channel,upscale_factor,format_type):
         super().__init__()
-        self.subpixel=nn.Sequential(nn.Conv2d(input_channel,
-                                              upscale_factor**2,
+        self.output_channel=output_channel
+        self.subpixel=nn.Sequential(nn.Conv2d(input_channel,self.output_channel*channel[format_type]*upscale_factor**2,
                                               kernel_size=1,
                                               stride=1,
                                               padding=0),
@@ -313,9 +317,9 @@ class Linear(nn.Module):
 
 
 class VGG(nn.Module):
-    def __init__(self):
+    def __init__(self,format_type):
         super().__init__()
-        self.net=nn.Sequential(nn.Conv2d(1,64,
+        self.net=nn.Sequential(nn.Conv2d(channel[format_type],64,
                                          kernel_size=3,
                                          stride=1,
                                          padding=1),

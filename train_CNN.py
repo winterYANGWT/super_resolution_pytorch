@@ -18,6 +18,7 @@ ITER_PER_EPOCH=10
 LEARNING_RATE=0.1**4
 SAVE_PATH='./Model/ESRGAN_DIV2K_4'
 CONTINUE=(EPOCH_START!=0)
+FROMAT_TYPE='RGB'
 
 def train(models,upscale_factor,data_loader,criterion,optimizer,meter,interpolate):
     #extract model
@@ -58,11 +59,11 @@ if __name__=='__main__':
 
     #add model
     models={}
-    models['generative']=model.RRDBNet().to(device)
+    models['generative']=model.RRDBNet(FROMAT_TYPE).to(device)
     models['upscale']={}
     for scale in UPSCALE_FACTOR_LIST:
-        models['upscale'][scale]=model.SubPixelLayer(models['generative'].output_channel,scale).to(device)
-    models['extra']=model.ExtraLayer().RRDBNet().to(device)
+        models['upscale'][scale]=model.SubPixelLayer(models['generative'].output_channel,scale,64,FORMAT_TYPE).to(device)
+    models['extra']=model.ExtraLayer(FORMAT_TYPE).RRDBNet().to(device)
 
     if CONTINUE==True:
         for scale in UPSCALE_FACTOR_LIST:
